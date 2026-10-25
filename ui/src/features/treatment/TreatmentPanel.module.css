@@ -1,0 +1,133 @@
+.panelContainer {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.panelTitle {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.categoryGroup {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.categoryHeader {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: 4px;
+}
+
+.cardsList {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.treatmentCard {
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-md);
+  padding: 10px 12px;
+  background-color: var(--bg-surface);
+  transition: all var(--transition-fast);
+  display: flex;
+  flex-direction: column;
+  gap: 6px;
+}
+
+.treatmentCard[data-selected="true"] {
+  border-color: var(--color-primary);
+  background-color: var(--color-primary-light);
+}
+
+.cardTopRow {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.drugNameArea {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.checkbox {
+  width: 16px;
+  height: 16px;
+  cursor: pointer;
+}
+
+.drugName {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-main);
+}
+
+.doseBadge {
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--color-primary);
+  background-color: var(--bg-surface);
+  border: 1px solid var(--color-primary);
+  padding: 2px 8px;
+  border-radius: var(--radius-full);
+}
+
+.adjustedBadge {
+  font-size: 10px;
+  font-weight: var(--font-weight-bold);
+  color: #92400e;
+  background-color: #fef3c7;
+  border: 1px solid #fcd34d;
+  padding: 2px 6px;
+  border-radius: var(--radius-sm);
+}
+
+.doseDetails {
+  font-size: var(--font-size-xs);
+  color: var(--text-secondary);
+  margin-left: 24px;
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+}
+
+.renalWarningText {
+  color: var(--color-warning-text);
+  font-size: 11px;
+  font-weight: var(--font-weight-medium);
+}
+
+.overrideRow {
+  display: flex;
+  gap: var(--space-xs);
+  align-items: center;
+  margin-top: 4px;
+  margin-left: 24px;
+  font-size: var(--font-size-xs);
+}
+
+.overrideInput {
+  padding: 3px 8px;
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+}

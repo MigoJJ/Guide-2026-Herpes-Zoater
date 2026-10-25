@@ -1,0 +1,58 @@
+.alertsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+}
+
+.alertCard {
+  border-radius: var(--radius-md);
+  padding: 10px 14px;
+  display: flex;
+  flex-direction: column;
+  gap: 4px;
+  animation: fadeIn var(--transition-fast) ease-in-out;
+}
+
+@keyframes fadeIn {
+  from { opacity: 0; transform: translateY(-4px); }
+  to { opacity: 1; transform: translateY(0); }
+}
+
+.alertCard[data-severity="critical"] {
+  background-color: var(--color-critical-bg);
+  border: 1px solid var(--color-critical-border);
+  color: var(--color-critical-text);
+}
+
+.alertCard[data-severity="warning"] {
+  background-color: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+}
+
+.alertCard[data-severity="info"] {
+  background-color: var(--color-info-bg);
+  border: 1px solid var(--color-info-border);
+  color: var(--color-info-text);
+}
+
+.alertTitle {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.alertMessage {
+  font-size: var(--font-size-xs);
+  line-height: var(--line-height-normal);
+}
+
+.alertRecommendation {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  margin-top: 4px;
+  padding-top: 4px;
+  border-top: 1px dashed rgba(0, 0, 0, 0.15);
+}

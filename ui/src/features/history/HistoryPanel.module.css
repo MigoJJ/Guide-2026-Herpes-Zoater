@@ -1,0 +1,133 @@
+.panelContainer {
+  background-color: var(--bg-surface);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-lg);
+  padding: var(--space-md);
+  box-shadow: var(--shadow-sm);
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-md);
+}
+
+.panelTitle {
+  font-size: var(--font-size-md);
+  font-weight: var(--font-weight-bold);
+  color: var(--text-main);
+  margin: 0;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.formSection {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  border-bottom: 1px solid var(--border-light);
+  padding-bottom: var(--space-sm);
+}
+
+.formSection:last-child {
+  border-bottom: none;
+  padding-bottom: 0;
+}
+
+.sectionLabel {
+  font-size: var(--font-size-xs);
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.inputRow {
+  display: flex;
+  align-items: center;
+  gap: var(--space-xs);
+  flex-wrap: wrap;
+}
+
+.textInput {
+  padding: 6px 10px;
+  font-size: var(--font-size-sm);
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+}
+
+.quickBtn {
+  padding: 4px 8px;
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--border-light);
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+}
+
+.quickBtn:hover {
+  background-color: var(--bg-surface-tertiary);
+  color: var(--text-main);
+}
+
+/* Pain Slider */
+.painContainer {
+  display: flex;
+  align-items: center;
+  gap: var(--space-sm);
+}
+
+.painSlider {
+  flex: 1;
+  cursor: pointer;
+}
+
+.painBadge {
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  padding: 2px 10px;
+  border-radius: var(--radius-full);
+  min-width: 48px;
+  text-align: center;
+}
+
+.painMild { background-color: #dcfce7; color: #166534; }
+.painMod { background-color: #fef3c7; color: #92400e; }
+.painSev { background-color: #fee2e2; color: #991b1b; }
+
+/* Radio / Checkbox Chips */
+.chipGroup {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.chip {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 5px 10px;
+  font-size: var(--font-size-xs);
+  border: 1px solid var(--border-light);
+  border-radius: var(--radius-full);
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  user-select: none;
+  transition: all var(--transition-fast);
+}
+
+.chip[data-checked="true"] {
+  background-color: var(--color-primary-light);
+  border-color: var(--color-primary);
+  color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.criticalChip[data-checked="true"] {
+  background-color: var(--color-critical-bg);
+  border-color: var(--color-critical-border);
+  color: var(--color-critical-text);
+  font-weight: var(--font-weight-bold);
+}
