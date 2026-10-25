@@ -1,5 +1,7 @@
 # Guide-2026-Herpes-Zoater
 
+ gemini --resume d52a6eb0-0045-4da4-b59a-ac84333e147d
+
 대상포진(Herpes Zoster, Shingles) 임상 진료 지원 및 EMR 표준 차팅 자동 생성 시스템 (2026)
 
 ## 개요 (Overview)
