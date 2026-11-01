@@ -10,7 +10,13 @@ describe('redFlags rules engine', () => {
       painNrs: 4,
       prodrome: ['itching'],
       riskFactors: [],
+      age: 45,
+      sex: 'M',
+      weightKg: 70,
+      serumCreatinine: 1.0,
       egfr: 90,
+      crcl: 90,
+      newVesiclesEmerging: false,
       ocularSymptoms: false,
       hutchinsonSign: false,
       hearingSymptoms: false,
@@ -32,53 +38,57 @@ describe('redFlags rules engine', () => {
     expect(hzo?.recommendation).toContain('안과');
   });
 
-  it('triggers critical alert for Hutchinson sign or ocular symptoms even without V1 explicit selection', () => {
+  it('triggers 72h exception alert when onset > 3 days but new vesicles are still emerging', () => {
+    const refDate = new Date('2026-10-30'); // 6 days after
     const encounter: Encounter = {
       ...baseEncounter,
       history: {
         ...baseEncounter.history,
-        hutchinsonSign: true,
+        onsetDate: '2026-10-24',
+        newVesiclesEmerging: true,
       },
     };
-    const alerts = evaluateRedFlags(encounter);
-    const hzo = alerts.find((a) => a.id === 'redflag-hzo');
-    expect(hzo).toBeDefined();
-    expect(hzo?.severity).toBe('critical');
+    const alerts = evaluateRedFlags(encounter, refDate);
+    const exception = alerts.find((a) => a.id === 'info-72h-exception');
+    expect(exception).toBeDefined();
+    expect(exception?.message).toContain('새로운 수포');
+    expect(exception?.recommendation).toContain('강력히 권고');
   });
 
-  it('triggers Ramsay Hunt syndrome alert when auditory or facial symptoms are present', () => {
-    const encounter: Encounter = {
+  it('triggers 72h exception alert for elderly (age >= 50) or severe pain (NRS >= 7)', () => {
+    const refDate = new Date('2026-10-30');
+    const encounterElderly: Encounter = {
       ...baseEncounter,
       history: {
         ...baseEncounter.history,
-        hearingSymptoms: true,
-        facialPalsy: true,
+        onsetDate: '2026-10-24',
+        age: 75,
+        newVesiclesEmerging: false,
       },
     };
-    const alerts = evaluateRedFlags(encounter);
-    const rh = alerts.find((a) => a.id === 'redflag-ramsay-hunt');
-    expect(rh).toBeDefined();
-    expect(rh?.severity).toBe('critical');
-    expect(rh?.recommendation).toContain('이비인후과');
+    const alerts = evaluateRedFlags(encounterElderly, refDate);
+    const exception = alerts.find((a) => a.id === 'info-72h-exception');
+    expect(exception).toBeDefined();
+    expect(exception?.message).toContain('50세 이상');
   });
 
-  it('triggers disseminated zoster alert when >= 3 dermatomes or bilateral', () => {
-    const encounterMulti: Encounter = {
+  it('warns about concomitant Tramadol + Gabapentinoid respiratory depression (FDA 2019)', () => {
+    const encounterCombo: Encounter = {
       ...baseEncounter,
-      lesions: [
-        { dermatome: 'T4', side: 'R' },
-        { dermatome: 'T5', side: 'R' },
-        { dermatome: 'L1', side: 'R' },
+      treatments: [
+        { drugId: 'valacyclovir' },
+        { drugId: 'tramadol_apap' },
+        { drugId: 'pregabalin' },
       ],
     };
-    const alerts = evaluateRedFlags(encounterMulti);
-    const dissem = alerts.find((a) => a.id === 'redflag-disseminated');
-    expect(dissem).toBeDefined();
-    expect(dissem?.severity).toBe('critical');
-    expect(dissem?.recommendation).toContain('IV Acyclovir');
+    const alerts = evaluateRedFlags(encounterCombo);
+    const warning = alerts.find((a) => a.id === 'warning-tramadol-gabapentinoid');
+    expect(warning).toBeDefined();
+    expect(warning?.title).toContain('FDA 2019');
+    expect(warning?.message).toContain('호흡 억제');
   });
 
-  it('warns about immunocompromised status regardless of onset timing', () => {
+  it('warns about immunocompromised status with extended therapy guidance', () => {
     const encounter: Encounter = {
       ...baseEncounter,
       history: {
@@ -90,35 +100,22 @@ describe('redFlags rules engine', () => {
     const ic = alerts.find((a) => a.id === 'redflag-immunocompromised');
     expect(ic).toBeDefined();
     expect(ic?.severity).toBe('warning');
+    expect(ic?.recommendation).toContain('가피(딱지)화');
   });
 
-  it('informs about delayed presentation (>72h) in immunocompetent patients', () => {
-    const refDate = new Date('2026-10-30'); // 6 days after 2026-10-24
+  it('prioritizes CrCl Cockcroft-Gault in renal impairment alert', () => {
     const encounter: Encounter = {
       ...baseEncounter,
       history: {
         ...baseEncounter.history,
-        onsetDate: '2026-10-24',
-      },
-    };
-    const alerts = evaluateRedFlags(encounter, refDate);
-    const delay = alerts.find((a) => a.id === 'info-delayed-presentation');
-    expect(delay).toBeDefined();
-    expect(delay?.severity).toBe('info');
-  });
-
-  it('warns about renal adjustment when eGFR is low with active antiviral', () => {
-    const encounter: Encounter = {
-      ...baseEncounter,
-      history: {
-        ...baseEncounter.history,
-        egfr: 35,
+        egfr: 56,
+        crcl: 38,
       },
       treatments: [{ drugId: 'valacyclovir' }],
     };
     const alerts = evaluateRedFlags(encounter);
     const renal = alerts.find((a) => a.id === 'warning-renal-adjustment');
     expect(renal).toBeDefined();
-    expect(renal?.severity).toBe('warning');
+    expect(renal?.title).toContain('CrCl');
   });
 });

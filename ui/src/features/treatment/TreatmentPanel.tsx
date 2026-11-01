@@ -2,36 +2,153 @@ import React from 'react';
 import styles from './TreatmentPanel.module.css';
 import { useEncounterStore, selectTreatments, selectHistory } from '../../store';
 import { DRUG_REGIMENS, calculateAdjustedDose } from '../../domain/regimens';
+import type { IvIndication } from '../../domain/types';
 
 export const TreatmentPanel: React.FC = () => {
   const treatments = useEncounterStore(selectTreatments);
   const history = useEncounterStore(selectHistory);
   const toggleTreatment = useEncounterStore((s) => s.toggleTreatment);
+  const selectAntiviral = useEncounterStore((s) => s.selectAntiviral);
+  const selectGabapentinoid = useEncounterStore((s) => s.selectGabapentinoid);
+  const switchToOral = useEncounterStore((s) => s.switchToOral);
+  const setIvIndication = useEncounterStore((s) => s.setIvIndication);
+  const setPrn = useEncounterStore((s) => s.setPrn);
   const updateTreatment = useEncounterStore((s) => s.updateTreatment);
   const clearTreatments = useEncounterStore((s) => s.clearTreatments);
 
-  const categories = [
-    {
-      id: 'antiviral',
-      title: '1. 항바이러스제 (Antivirals - 발병 72시간 이내 권장)',
-      drugIds: ['valacyclovir', 'famciclovir', 'acyclovir_oral', 'acyclovir_iv'],
-    },
-    {
-      id: 'neuropathic_analgesic',
-      title: '2. 신경병증성 통증 조절제 (Gabapentinoids - PHN 예방 및 조기 조절)',
-      drugIds: ['pregabalin', 'gabapentin'],
-    },
-    {
-      id: 'nsaid_analgesic',
-      title: '3. 급성기 소염진통제 (Acute Analgesics)',
-      drugIds: ['tramadol_apap', 'nsaid_ibuprofen'],
-    },
-    {
-      id: 'topical',
-      title: '4. 국소 외용제 (Topical Agents)',
-      drugIds: ['calamine_lotion', 'lidocaine_patch'],
-    },
-  ];
+  const selectedAntiviral = treatments.find((t) =>
+    ['valacyclovir', 'famciclovir', 'famvir_kr_250', 'acyclovir_oral', 'acyclovir_iv', 'foscarnet_iv'].includes(
+      t.drugId
+    )
+  );
+  const isIvActive = selectedAntiviral?.drugId === 'acyclovir_iv' || selectedAntiviral?.drugId === 'foscarnet_iv';
+
+  // Check concomitant safety alert
+  const hasTramadol = treatments.some((t) => t.drugId === 'tramadol_apap');
+  const hasGabapentinoid = treatments.some((t) => ['pregabalin', 'gabapentin'].includes(t.drugId));
+
+  const renderDrugCard = (drugId: string, isRadio = false, onRadioSelect?: (id: string) => void) => {
+    const drug = DRUG_REGIMENS[drugId];
+    if (!drug) return null;
+
+    const selectedTx = treatments.find((t) => t.drugId === drugId);
+    const isSelected = !!selectedTx;
+
+    // Calculate renal adjusted recommendation using CrCl / eGFR / weight
+    const adj = calculateAdjustedDose(drugId, {
+      crcl: history.crcl,
+      egfr: history.egfr,
+      weightKg: history.weightKg,
+      age: history.age,
+      ivIndication: selectedTx?.ivIndication,
+    });
+
+    return (
+      <div key={drugId} className={styles.treatmentCard} data-selected={isSelected}>
+        <div className={styles.cardTopRow}>
+          <div className={styles.drugNameArea}>
+            <input
+              type={isRadio ? 'radio' : 'checkbox'}
+              className={styles.inputControl}
+              checked={isSelected}
+              onChange={() => {
+                if (isRadio && onRadioSelect) {
+                  onRadioSelect(drugId);
+                } else {
+                  toggleTreatment(drugId);
+                }
+              }}
+              id={`drug-${drugId}`}
+              name={isRadio ? (drug.category.startsWith('antiviral') ? 'antiviral_group' : 'gabapentinoid_group') : undefined}
+            />
+            <label htmlFor={`drug-${drugId}`} className={styles.drugName}>
+              {drug.nameKo}
+            </label>
+            {adj.isAdjusted && (
+              <span className={styles.adjustedBadge}>
+                {adj.renalMetricUsed} 용량감량 권고
+              </span>
+            )}
+          </div>
+          <span className={styles.doseBadge}>
+            {adj.dose} {adj.frequency.split(' (')[0]}
+          </span>
+        </div>
+
+        <div className={styles.doseDetails}>
+          <div>
+            <strong>권장 투여:</strong> {adj.dose} {adj.frequency} × {adj.durationDays}일
+          </div>
+          <div style={{ color: 'var(--text-muted)' }}>{drug.notes}</div>
+          {adj.renalWarning && (
+            <div className={styles.renalWarningText}>⚠️ {adj.renalWarning}</div>
+          )}
+        </div>
+
+        {isSelected && (
+          <div className={styles.overrideRow}>
+            {/* IV Indication selector for Acyclovir IV */}
+            {drugId === 'acyclovir_iv' && (
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontWeight: 600 }}>적응증:</span>
+                <select
+                  className={styles.selectInput}
+                  value={selectedTx?.ivIndication || 'disseminated_immunocompromised'}
+                  onChange={(e) => setIvIndication(drugId, e.target.value as IvIndication)}
+                >
+                  <option value="disseminated_immunocompromised">면역저하/파종성 (7-10일 후 경구전환)</option>
+                  <option value="cns_involvement">중추신경계 침범/수막뇌염 (10-14일)</option>
+                  <option value="acute_retinal_necrosis">급성망막괴사 ARN (10-14일 후 경구유지)</option>
+                  <option value="severe_facial_or_ophthalmic">중증 안부/안면 대상포진</option>
+                </select>
+              </div>
+            )}
+
+            {/* PRN toggle for Tramadol */}
+            {drugId === 'tramadol_apap' && (
+              <label className={styles.prnToggle}>
+                <input
+                  type="checkbox"
+                  checked={selectedTx?.isPrn ?? false}
+                  onChange={(e) => setPrn(drugId, e.target.checked)}
+                />
+                <span>필요시(PRN) 투여</span>
+              </label>
+            )}
+
+            <span>수동 조정:</span>
+            <input
+              type="text"
+              placeholder={adj.dose}
+              className={styles.overrideInput}
+              style={{ width: '90px' }}
+              value={selectedTx?.doseOverride || ''}
+              onChange={(e) => updateTreatment(drugId, { doseOverride: e.target.value })}
+            />
+            <input
+              type="text"
+              placeholder={adj.frequency}
+              className={styles.overrideInput}
+              style={{ width: '130px' }}
+              value={selectedTx?.frequencyOverride || ''}
+              onChange={(e) => updateTreatment(drugId, { frequencyOverride: e.target.value })}
+            />
+            <input
+              type="number"
+              placeholder={`${adj.durationDays}일`}
+              className={styles.overrideInput}
+              style={{ width: '55px' }}
+              value={selectedTx?.durationDays || ''}
+              onChange={(e) => {
+                const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
+                updateTreatment(drugId, { durationDays: val });
+              }}
+            />
+          </div>
+        )}
+      </div>
+    );
+  };
 
   return (
     <div className={styles.panelContainer}>
@@ -54,99 +171,80 @@ export const TreatmentPanel: React.FC = () => {
         )}
       </h2>
 
-      {categories.map((cat) => (
-        <div key={cat.id} className={styles.categoryGroup}>
-          <div className={styles.categoryHeader}>{cat.title}</div>
-          <div className={styles.cardsList}>
-            {cat.drugIds.map((drugId) => {
-              const drug = DRUG_REGIMENS[drugId];
-              if (!drug) return null;
-
-              const selectedTx = treatments.find((t) => t.drugId === drugId);
-              const isSelected = !!selectedTx;
-
-              // Calculate renal adjusted recommendation
-              const adj = calculateAdjustedDose(drugId, history.egfr);
-
-              return (
-                <div
-                  key={drugId}
-                  className={styles.treatmentCard}
-                  data-selected={isSelected}
-                >
-                  <div className={styles.cardTopRow}>
-                    <div className={styles.drugNameArea}>
-                      <input
-                        type="checkbox"
-                        className={styles.checkbox}
-                        checked={isSelected}
-                        onChange={() => toggleTreatment(drugId)}
-                        id={`drug-${drugId}`}
-                      />
-                      <label htmlFor={`drug-${drugId}`} className={styles.drugName}>
-                        {drug.nameKo}
-                      </label>
-                      {adj.isAdjusted && (
-                        <span className={styles.adjustedBadge}>eGFR 용량감량 권고</span>
-                      )}
-                    </div>
-                    <span className={styles.doseBadge}>
-                      {adj.dose} {adj.frequency.split(' (')[0]}
-                    </span>
-                  </div>
-
-                  <div className={styles.doseDetails}>
-                    <div>
-                      <strong>권장 투여:</strong> {adj.dose} {adj.frequency} × {adj.durationDays}일
-                    </div>
-                    <div style={{ color: 'var(--text-muted)' }}>{drug.notes}</div>
-                    {adj.renalWarning && (
-                      <div className={styles.renalWarningText}>⚠️ {adj.renalWarning}</div>
-                    )}
-                  </div>
-
-                  {isSelected && (
-                    <div className={styles.overrideRow}>
-                      <span>수동 조정:</span>
-                      <input
-                        type="text"
-                        placeholder={adj.dose}
-                        className={styles.overrideInput}
-                        style={{ width: '90px' }}
-                        value={selectedTx?.doseOverride || ''}
-                        onChange={(e) =>
-                          updateTreatment(drugId, { doseOverride: e.target.value })
-                        }
-                      />
-                      <input
-                        type="text"
-                        placeholder={adj.frequency}
-                        className={styles.overrideInput}
-                        style={{ width: '130px' }}
-                        value={selectedTx?.frequencyOverride || ''}
-                        onChange={(e) =>
-                          updateTreatment(drugId, { frequencyOverride: e.target.value })
-                        }
-                      />
-                      <input
-                        type="number"
-                        placeholder={`${adj.durationDays}일`}
-                        className={styles.overrideInput}
-                        style={{ width: '55px' }}
-                        value={selectedTx?.durationDays || ''}
-                        onChange={(e) => {
-                          const val = e.target.value ? parseInt(e.target.value, 10) : undefined;
-                          updateTreatment(drugId, { durationDays: val });
-                        }}
-                      />
-                    </div>
-                  )}
-                </div>
-              );
-            })}
-          </div>
+      {/* Safety Alert Banner */}
+      {hasTramadol && hasGabapentinoid && (
+        <div className={styles.safetyAlertBanner} role="alert">
+          <strong>⚠️ [병용 주의] 트라마돌 + 가바펜티노이드(프레가발린/가바펜틴) FDA 2019 안전성 경고:</strong>
+          <span>중추신경 억제, 과도한 진정 및 호흡 억제 위험이 있으므로 병용 시 최저 유효 용량으로 시작하고 면밀히 모니터링하십시오.</span>
         </div>
-      ))}
+      )}
+
+      {/* 1. Antivirals (Single selection required) */}
+      <div className={styles.categoryGroup}>
+        <div className={styles.categoryHeader}>
+          <span>1. 항바이러스제 (Antivirals - 단일 제제 선택 원칙)</span>
+          {isIvActive && (
+            <button
+              type="button"
+              className={styles.stepDownBtn}
+              onClick={() => switchToOral('valacyclovir')}
+              title="상태 안정 시 주사제에서 경구 발라시클로버로 전환"
+            >
+              💊 IV → 경구 전환 (Step-down)
+            </button>
+          )}
+        </div>
+
+        {/* Oral Subgroup */}
+        <div className={styles.subgroupHeader}>경구 투여 제제 (Oral Regimens)</div>
+        <div className={styles.cardsList}>
+          {['valacyclovir', 'famciclovir', 'famvir_kr_250', 'acyclovir_oral'].map((id) =>
+            renderDrugCard(id, true, selectAntiviral)
+          )}
+        </div>
+
+        {/* IV Subgroup */}
+        <div className={styles.subgroupHeader} style={{ marginTop: '10px' }}>
+          정맥주사 입원 치료 제제 (IV Regimens)
+        </div>
+        <div className={styles.cardsList}>
+          {['acyclovir_iv', 'foscarnet_iv'].map((id) =>
+            renderDrugCard(id, true, selectAntiviral)
+          )}
+        </div>
+      </div>
+
+      {/* 2. Neuropathic Pain Modulators (Gabapentinoids - Single selection) */}
+      <div className={styles.categoryGroup}>
+        <div className={styles.categoryHeader}>
+          <span>2. 급성기 신경병증성 통증 조절제 (Gabapentinoids - 1종 선택, 14일 후 재평가 및 감량)</span>
+        </div>
+        <div className={styles.cardsList}>
+          {['pregabalin', 'gabapentin'].map((id) =>
+            renderDrugCard(id, true, selectGabapentinoid)
+          )}
+        </div>
+      </div>
+
+      {/* 3. Acute Analgesics */}
+      <div className={styles.categoryGroup}>
+        <div className={styles.categoryHeader}>
+          <span>3. 급성기 소염진통제 (Acute Analgesics - Scheduled / PRN)</span>
+        </div>
+        <div className={styles.cardsList}>
+          {['tramadol_apap', 'nsaid_ibuprofen'].map((id) => renderDrugCard(id))}
+        </div>
+      </div>
+
+      {/* 4. Topicals */}
+      <div className={styles.categoryGroup}>
+        <div className={styles.categoryHeader}>
+          <span>4. 국소 외용제 (Topical Agents)</span>
+        </div>
+        <div className={styles.cardsList}>
+          {['calamine_lotion', 'lidocaine_patch'].map((id) => renderDrugCard(id))}
+        </div>
+      </div>
     </div>
   );
 };

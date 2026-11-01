@@ -61,6 +61,15 @@ export const RiskFactorSchema = z.enum([
   'diabetes',
 ]);
 
+export const BiologicalSexSchema = z.enum(['M', 'F']);
+
+export const IvIndicationSchema = z.enum([
+  'disseminated_immunocompromised',
+  'cns_involvement',
+  'acute_retinal_necrosis',
+  'severe_facial_or_ophthalmic',
+]);
+
 export const HistorySchema = z.object({
   onsetDate: z
     .string()
@@ -74,7 +83,13 @@ export const HistorySchema = z.object({
     .nullable(),
   prodrome: z.array(ProdromeSymptomSchema),
   riskFactors: z.array(RiskFactorSchema),
+  age: z.number().min(0).max(130).nullable(),
+  sex: BiologicalSexSchema.nullable(),
+  weightKg: z.number().min(10).max(300).nullable(),
+  serumCreatinine: z.number().min(0.1).max(20).nullable(),
   egfr: z.number().min(0).max(200).nullable(),
+  crcl: z.number().min(0).max(300).nullable(),
+  newVesiclesEmerging: z.boolean(),
   ocularSymptoms: z.boolean(),
   hutchinsonSign: z.boolean(),
   hearingSymptoms: z.boolean(),
@@ -86,6 +101,8 @@ export const RegimenSelectionSchema = z.object({
   doseOverride: z.string().optional(),
   frequencyOverride: z.string().optional(),
   durationDays: z.number().int().positive().optional(),
+  isPrn: z.boolean().optional(),
+  ivIndication: IvIndicationSchema.optional(),
 });
 
 export const EncounterSchema = z.object({

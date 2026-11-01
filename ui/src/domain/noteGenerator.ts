@@ -31,6 +31,13 @@ function buildSubjective(
 ): string {
   const parts: string[] = [];
 
+  // Patient Demographic summary
+  const demoParts: string[] = [];
+  if (history.age !== null) demoParts.push(`${history.age}세`);
+  if (history.sex !== null) demoParts.push(history.sex === 'M' ? '남성' : '여성');
+  if (history.weightKg !== null) demoParts.push(`${history.weightKg}kg`);
+  const demoPrefix = demoParts.length > 0 ? `[환자: ${demoParts.join('/')}] ` : '';
+
   // 1. Onset & Duration
   if (history.onsetDate) {
     try {
@@ -41,16 +48,21 @@ function buildSubjective(
       if (locale === 'ko') {
         const sites = lesions.map((l) => `${formatSideKo(l.side)} ${l.dermatome}`).join(', ');
         const siteStr = sites ? `${sites} 부위 ` : '';
-        parts.push(`${daysText}(${history.onsetDate}) 발현된 ${siteStr}피부 병변 및 통증을 주소로 내원.`);
+        const vesicleNote = history.newVesiclesEmerging ? ' (새로운 수포 지속 형성 중)' : '';
+        parts.push(
+          `${demoPrefix}${daysText}(${history.onsetDate}) 발현된 ${siteStr}피부 병변 및 통증을 주소로 내원${vesicleNote}.`
+        );
       } else {
         const sites = lesions.map((l) => `${l.side} ${l.dermatome}`).join(', ');
-        parts.push(`Patient presents with painful lesions on ${sites || 'skin'}, onset ${days} days ago (${history.onsetDate}).`);
+        parts.push(
+          `${demoPrefix}Patient presents with painful lesions on ${sites || 'skin'}, onset ${days} days ago (${history.onsetDate}).`
+        );
       }
     } catch {
       parts.push(locale === 'ko' ? `발병일: ${history.onsetDate}` : `Onset date: ${history.onsetDate}`);
     }
   } else {
-    parts.push(locale === 'ko' ? '수일 전 발현된 피부 병변 및 통증으로 내원.' : 'Presents with skin rash and pain.');
+    parts.push(locale === 'ko' ? `${demoPrefix}수일 전 발현된 피부 병변 및 통증으로 내원.` : 'Presents with skin rash and pain.');
   }
 
   // 2. Pain NRS
@@ -93,7 +105,7 @@ function buildSubjective(
   if (special.length > 0) {
     parts.push(
       locale === 'ko'
-        ? `동반 증상: ${special.join(', ')}.`
+        ? `동반 특수 징후: ${special.join(', ')}.`
         : `Associated features: ${special.join(', ')}.`
     );
   }
@@ -154,12 +166,25 @@ function buildObjective(
     );
   }
 
-  // eGFR note if available
+  // Renal function panel (CrCl vs eGFR)
+  const renalItems: string[] = [];
+  if (history.crcl !== null) {
+    renalItems.push(`CrCl(Cockcroft-Gault): ${history.crcl} mL/min`);
+  }
   if (history.egfr !== null) {
+    renalItems.push(`eGFR: ${history.egfr} mL/min/1.73m²`);
+  }
+  if (history.serumCreatinine !== null) {
+    renalItems.push(`sCr: ${history.serumCreatinine} mg/dL`);
+  }
+
+  if (renalItems.length > 0) {
+    const isImpaired = (history.crcl !== null && history.crcl < 60) || (history.egfr !== null && history.egfr < 60);
+    const statusNote = isImpaired ? ' (신기능 저하 상태, 약제별 감량 기준 적용)' : ' (신기능 정상 범위)';
     parts.push(
       locale === 'ko'
-        ? `신장 기능: eGFR ${history.egfr} mL/min/1.73m² ${history.egfr < 60 ? '(신기능 저하 상태)' : '(정상 범위)'}.`
-        : `Renal panel: eGFR ${history.egfr} mL/min/1.73m².`
+        ? `신장 기능 평가: ${renalItems.join(', ')}${statusNote}.`
+        : `Renal panel: ${renalItems.join(', ')}.`
     );
   }
 
@@ -195,29 +220,41 @@ function buildAssessment(
   const siteList = lesions.map((l) => `${l.side} ${l.dermatome}`).join(', ');
   const siteSuffix = siteList ? ` [${siteList}]` : '';
 
-  parts.push(
-    locale === 'ko'
-      ? `1. ${primaryName}${siteSuffix} (${icdCode})`
-      : `1. ${primaryName}${siteSuffix} (${icdCode})`
-  );
+  parts.push(`1. ${primaryName}${siteSuffix} (${icdCode})`);
 
-  // Time window status
+  // Time window status & Golden Time Exception
   if (history.onsetDate) {
     try {
       const onset = parseISO(history.onsetDate);
       const days = differenceInDays(referenceDate, onset);
+
       if (days <= 3) {
         parts.push(
           locale === 'ko'
-            ? '  - 발병 72시간 이내 골든타임 내 내원: 즉각적인 항바이러스제 조기 치료를 통해 치유 촉진 및 PHN 예방 도모.'
+            ? '  - 발병 72시간 이내 골든타임 내원: 조기 항바이러스제 치료를 통해 병변 치유 촉진 및 급성 신경염 통증 조절.'
             : '  - Presented within 72h window: prompt antiviral therapy indicated.'
         );
       } else {
-        parts.push(
-          locale === 'ko'
-            ? `  - 발병 약 ${days}일 경과: 활성 수포 여부 확인 및 통증/신경염 집중 관리 필요.`
-            : `  - Presented ${days} days after onset: focus on pain management and complication monitoring.`
-        );
+        const exceptionReasons: string[] = [];
+        if (history.newVesiclesEmerging) exceptionReasons.push('새로운 수포 지속 형성');
+        if (hasV1 || history.hutchinsonSign || history.ocularSymptoms) exceptionReasons.push('안부 침범');
+        if (history.riskFactors.includes('immunocompromised')) exceptionReasons.push('면역저하자');
+        if ((history.age !== null && history.age >= 50) || history.riskFactors.includes('age_ge_50')) exceptionReasons.push('50세 이상 고령');
+        if (history.painNrs !== null && history.painNrs >= 7) exceptionReasons.push('중증 통증(NRS≥7)');
+
+        if (exceptionReasons.length > 0) {
+          parts.push(
+            locale === 'ko'
+              ? `  - 발병 ${days}일 경과하였으나 [${exceptionReasons.join(', ')}] 예외 적응증에 해당하여 적극적 항바이러스 요법 개시.`
+              : `  - Presented ${days} days after onset, but antiviral therapy indicated due to: ${exceptionReasons.join(', ')}.`
+          );
+        } else {
+          parts.push(
+            locale === 'ko'
+              ? `  - 발병 약 ${days}일 경과: 급성기 신경통 조절 및 합병증 모니터링 중심 관리.`
+              : `  - Presented ${days} days after onset: focus on pain management and complication monitoring.`
+          );
+        }
       }
     } catch {
       // ignore
@@ -242,13 +279,21 @@ function buildPlan(
       const base = DRUG_REGIMENS[tx.drugId];
       if (!base) return;
 
-      const adj = calculateAdjustedDose(tx.drugId, history.egfr);
+      const adj = calculateAdjustedDose(tx.drugId, {
+        crcl: history.crcl,
+        egfr: history.egfr,
+        weightKg: history.weightKg,
+        age: history.age,
+        ivIndication: tx.ivIndication,
+      });
+
       const dose = tx.doseOverride || adj.dose;
       const freq = tx.frequencyOverride || adj.frequency;
       const duration = tx.durationDays || adj.durationDays;
+      const prnText = tx.isPrn ? ' (필요시 PRN)' : '';
 
-      const note = adj.isAdjusted ? ' [신기능 용량 조절됨]' : '';
-      rxLines.push(`  ${idx + 1}) ${base.nameKo}: ${dose} ${freq} × ${duration}일${note}`);
+      const note = adj.isAdjusted ? ` [${adj.renalMetricUsed} 기준 용량 감량됨]` : '';
+      rxLines.push(`  ${idx + 1}) ${base.nameKo}: ${dose} ${freq}${prnText} × ${duration}일${note}`);
     });
 
     if (rxLines.length > 0) {
@@ -263,14 +308,14 @@ function buildPlan(
   const referrals: string[] = [];
   const hasV1 = lesions.some((l) => l.dermatome === 'V1');
   if (hasV1 || history.ocularSymptoms || history.hutchinsonSign) {
-    referrals.push('안과(Ophthalmology) 당일 긴급 협진 의뢰 (각막/망막 침범 여부 평가).');
+    referrals.push('안과(Ophthalmology) 당일 즉시 응급 협진 의뢰 (각막염, 포도막염, 망막괴사 배제).');
   }
   if (history.hearingSymptoms || history.facialPalsy) {
-    referrals.push('이비인후과/신경과 협진 (안면신경 감압 및 전신 스테로이드 요법 협의).');
+    referrals.push('이비인후과/신경과 협진 (안면신경 감압 및 고용량 스테로이드 병용 요법 협의).');
   }
   const uniqueDermatomes = new Set(lesions.map((l) => l.dermatome));
   if (uniqueDermatomes.size >= 3 || lesions.some((l) => l.side === 'Bilateral')) {
-    referrals.push('내과 입원 격리 및 IV Acyclovir 전환 치료 권고.');
+    referrals.push('내과 입원(공기/접촉 격리 병실) 및 정맥주사(IV Acyclovir 10 mg/kg q8h) 치료.');
   }
   if (history.painNrs !== null && history.painNrs >= 7) {
     referrals.push('심한 급성 통증 지속 시 마취통증의학과 신경차단술(Nerve block) 의뢰 고려.');
@@ -281,13 +326,28 @@ function buildPlan(
     referrals.forEach((r) => parts.push(`  - ${r}`));
   }
 
-  // 3. Patient Education
-  parts.push(locale === 'ko' ? '\n3. 환자 복약 지도 및 주의사항 안내:' : '\n3. Patient Education:');
-  parts.push('  - 약물 복용을 임의로 중단하지 말고 7일 전량을 끝까지 복용하도록 설명함.');
-  parts.push('  - 수포 부위를 긁거나 터뜨리지 말고 청결과 건조를 유지하도록 지도함.');
-  parts.push('  - 수포 진물이 마르고 딱지가 앉을 때까지 영유아, 임산부, 면역저하자와의 접촉을 피하도록 감염 예방 교육.');
-  parts.push('  - 시력 저하, 안통 충혈, 심한 두통, 목 경직, 의식 저하 등 위험 징후 발생 시 즉시 응급실 내원 안내.');
-  parts.push('  - 급성기 완치 후 대상포진 재발 및 PHN 예방을 위해 유전자재조합 대상포진 백신(싱그릭스 2회) 접종 권고.');
+  // 3. Clinical Guidelines & Patient Education
+  parts.push(locale === 'ko' ? '\n3. 임상 관리 지침 및 복약 지도:' : '\n3. Patient Education:');
+  parts.push('  - 항바이러스제는 임의 중단 없이 처방된 일수(7일 전량)를 규칙적으로 끝까지 복용하도록 설명함.');
+
+  if (history.riskFactors.includes('immunocompromised')) {
+    parts.push('  - [면역저하자] 모든 병변이 완전히 가피(딱지)화될 때까지 항바이러스제 치료 기간을 연장하여 지속 투여함.');
+  }
+
+  const hasGabapentinoid = treatments.some((t) => ['pregabalin', 'gabapentin'].includes(t.drugId));
+  if (hasGabapentinoid) {
+    parts.push('  - [신경통 조절제] 14일 투여 후 급성 통증 완화 정도를 재평가하며, 투약 중단 시 금단 증상 예방을 위해 점진적 감량(Tapering)을 진행함.');
+  }
+
+  const hasTramadol = treatments.some((t) => t.drugId === 'tramadol_apap');
+  if (hasTramadol && hasGabapentinoid) {
+    parts.push('  - [병용 주의] 트라마돌과 신경통 조절제 병용 시 졸림 및 호흡 억제 가능성에 대해 환자 및 보호자에게 교육함.');
+  }
+
+  parts.push('  - 수포 부위를 긁거나 터뜨리지 말고 청결과 건조를 유지하며, 이차 세균 감염 예방 지도.');
+  parts.push('  - 모든 수포가 마르고 가피가 앉을 때까지 영유아, 임산부, 수두 미감염자 접촉 금지.');
+  parts.push('  - 시력 저하, 안통 충혈, 극심한 두통, 목 경직, 의식 저하 등 위험 징후 발생 시 즉시 응급실 내원 안내.');
+  parts.push('  - 급성기 호전 후 대상포진 재발 및 만성 신경통(PHN) 예방을 위해 유전자재조합 대상포진 백신(싱그릭스 2회 접종, 2~6개월 간격) 접종 강력 권고.');
 
   return `[P]\n${parts.join('\n')}`;
 }

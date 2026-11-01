@@ -17,6 +17,7 @@
   display: flex;
   align-items: center;
   gap: var(--space-xs);
+  flex-wrap: wrap;
 }
 
 .title {
@@ -69,12 +70,12 @@
 
 .contentSplit {
   display: grid;
-  grid-template-columns: 1.1fr 0.9fr;
+  grid-template-columns: 1.15fr 0.85fr;
   gap: var(--space-md);
   align-items: start;
 }
 
-@media (max-width: 900px) {
+@media (max-width: 960px) {
   .contentSplit {
     grid-template-columns: 1fr;
   }
@@ -91,59 +92,15 @@
   justify-content: center;
   position: relative;
   box-shadow: var(--shadow-sm);
-  min-height: 480px;
+  min-height: 520px;
 }
 
 .svgRoot {
   width: 100%;
-  max-width: 440px;
+  max-width: 520px;
   height: auto;
   user-select: none;
   overflow: visible;
-}
-
-/* Dermatome Path Styles & Interactive Attributes */
-.svgRoot path[data-dermatome],
-.svgRoot rect[data-dermatome],
-.svgRoot polygon[data-dermatome] {
-  cursor: pointer;
-  stroke: var(--border-strong);
-  stroke-width: 1.2px;
-  vector-effect: non-scaling-stroke;
-  transition: fill var(--transition-fast), stroke var(--transition-fast), filter var(--transition-fast);
-  outline: none;
-}
-
-/* Base region fills */
-.svgRoot path[data-region="cranial"] { fill: #f5f3ff; }
-.svgRoot path[data-region="cervical"] { fill: #eff6ff; }
-.svgRoot path[data-region="thoracic"] { fill: #ecfdf5; }
-.svgRoot path[data-region="lumbar"] { fill: #fffbeb; }
-.svgRoot path[data-region="sacral"] { fill: #fef2f2; }
-
-/* CSS-only :hover pseudo class as mandated in architecture specs */
-.svgRoot path[data-dermatome]:hover,
-.svgRoot rect[data-dermatome]:hover {
-  fill: var(--dermatome-hover) !important;
-  stroke: var(--color-primary);
-  stroke-width: 2px;
-}
-
-/* Accessibility Focus Ring */
-.svgRoot path[data-dermatome]:focus-visible,
-.svgRoot rect[data-dermatome]:focus-visible {
-  stroke: var(--color-primary);
-  stroke-width: 2.5px;
-  filter: drop-shadow(0 0 4px var(--color-primary));
-}
-
-/* Active Pressed Selection */
-.svgRoot path[data-dermatome][aria-pressed="true"],
-.svgRoot rect[data-dermatome][aria-pressed="true"] {
-  fill: var(--color-primary) !important;
-  stroke: #1e3a8a;
-  stroke-width: 2px;
-  filter: drop-shadow(0 2px 4px rgba(37, 99, 235, 0.4));
 }
 
 .mapLegend {
@@ -163,13 +120,13 @@
 }
 
 .legendColor {
-  width: 10px;
-  height: 10px;
-  border-radius: 2px;
+  width: 12px;
+  height: 12px;
+  border-radius: 3px;
   border: 1px solid var(--border-medium);
 }
 
-/* Side List Panel */
+/* Side List Panel with custom slide bar and full visibility */
 .listPanel {
   background-color: var(--bg-surface);
   border: 1px solid var(--border-light);
@@ -178,14 +135,50 @@
   box-shadow: var(--shadow-sm);
   display: flex;
   flex-direction: column;
-  gap: var(--space-sm);
-  max-height: 520px;
+  gap: var(--space-xs);
+  height: 640px;
+  max-height: 640px;
   overflow-y: auto;
+  scrollbar-width: thin;
+  scrollbar-color: var(--color-primary) var(--bg-surface-secondary);
 }
 
-.listFilter {
+/* Smooth customized Webkit scrollbar for easy sliding */
+.listPanel::-webkit-scrollbar {
+  width: 8px;
+}
+
+.listPanel::-webkit-scrollbar-track {
+  background: var(--bg-surface-secondary);
+  border-radius: var(--radius-full);
+}
+
+.listPanel::-webkit-scrollbar-thumb {
+  background: var(--border-strong);
+  border-radius: var(--radius-full);
+  border: 2px solid var(--bg-surface-secondary);
+}
+
+.listPanel::-webkit-scrollbar-thumb:hover {
+  background: var(--color-primary);
+}
+
+.listTopBar {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  position: sticky;
+  top: 0;
+  background-color: var(--bg-surface);
+  z-index: 10;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border-light);
+}
+
+.searchRow {
   display: flex;
   gap: var(--space-xs);
+  align-items: center;
 }
 
 .searchInput {
@@ -198,6 +191,59 @@
   color: var(--text-main);
 }
 
+.collapseAllBtn {
+  font-size: 11px;
+  padding: 5px 8px;
+  border: 1px solid var(--border-medium);
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  white-space: nowrap;
+}
+
+.collapseAllBtn:hover {
+  background-color: var(--bg-surface-tertiary);
+  color: var(--text-main);
+}
+
+.regionFilterBar {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 4px;
+}
+
+.regionChip {
+  font-size: 11px;
+  padding: 3px 8px;
+  border-radius: var(--radius-full);
+  border: 1px solid var(--border-medium);
+  background-color: var(--bg-surface-secondary);
+  color: var(--text-secondary);
+  cursor: pointer;
+  font-weight: var(--font-weight-medium);
+  transition: all var(--transition-fast);
+}
+
+.regionChip:hover {
+  background-color: var(--bg-surface-tertiary);
+  color: var(--text-main);
+}
+
+.regionChip[data-active="true"] {
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
+  border-color: var(--color-primary);
+  font-weight: var(--font-weight-semibold);
+}
+
+.sectionsContainer {
+  display: flex;
+  flex-direction: column;
+  gap: var(--space-xs);
+  margin-top: 4px;
+}
+
 .regionSection {
   border: 1px solid var(--border-light);
   border-radius: var(--radius-md);
@@ -205,13 +251,34 @@
 }
 
 .regionHeader {
-  padding: 6px 10px;
+  padding: 7px 10px;
   font-size: var(--font-size-xs);
   font-weight: var(--font-weight-semibold);
   background-color: var(--bg-surface-secondary);
-  color: var(--text-secondary);
+  color: var(--text-main);
   display: flex;
   justify-content: space-between;
+  align-items: center;
+  cursor: pointer;
+  user-select: none;
+  transition: background-color var(--transition-fast);
+}
+
+.regionHeader:hover {
+  background-color: var(--bg-surface-tertiary);
+}
+
+.regionHeaderRight {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 11px;
+  color: var(--text-muted);
+}
+
+.chevronIcon {
+  font-size: 9px;
+  transition: transform var(--transition-fast);
 }
 
 .itemsGrid {
@@ -219,6 +286,7 @@
   grid-template-columns: repeat(auto-fill, minmax(130px, 1fr));
   gap: 6px;
   padding: 8px;
+  background-color: var(--bg-surface);
 }
 
 .dermatomeCard {
@@ -253,7 +321,7 @@
 
 .sideBtn {
   flex: 1;
-  padding: 2px 4px;
+  padding: 3px 4px;
   font-size: 10px;
   font-weight: var(--font-weight-semibold);
   border: 1px solid var(--border-light);

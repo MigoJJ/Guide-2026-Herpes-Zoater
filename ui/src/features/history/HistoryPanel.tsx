@@ -2,7 +2,7 @@ import React from 'react';
 import styles from './HistoryPanel.module.css';
 import { useEncounterStore, selectHistory } from '../../store';
 import { format, subDays } from 'date-fns';
-import type { ProdromeSymptom, RashStage, RiskFactor } from '../../domain/types';
+import type { BiologicalSex, ProdromeSymptom, RashStage, RiskFactor } from '../../domain/types';
 
 export const HistoryPanel: React.FC = () => {
   const history = useEncounterStore(selectHistory);
@@ -11,7 +11,13 @@ export const HistoryPanel: React.FC = () => {
   const setPainNrs = useEncounterStore((s) => s.setPainNrs);
   const toggleProdrome = useEncounterStore((s) => s.toggleProdrome);
   const toggleRiskFactor = useEncounterStore((s) => s.toggleRiskFactor);
+  const setAge = useEncounterStore((s) => s.setAge);
+  const setSex = useEncounterStore((s) => s.setSex);
+  const setWeightKg = useEncounterStore((s) => s.setWeightKg);
+  const setSerumCreatinine = useEncounterStore((s) => s.setSerumCreatinine);
   const setEgfr = useEncounterStore((s) => s.setEgfr);
+  const setCrcl = useEncounterStore((s) => s.setCrcl);
+  const setNewVesiclesEmerging = useEncounterStore((s) => s.setNewVesiclesEmerging);
   const setOcularSymptoms = useEncounterStore((s) => s.setOcularSymptoms);
   const setHutchinsonSign = useEncounterStore((s) => s.setHutchinsonSign);
   const setHearingSymptoms = useEncounterStore((s) => s.setHearingSymptoms);
@@ -59,10 +65,143 @@ export const HistoryPanel: React.FC = () => {
         <span>병력 청취 및 문진 (History)</span>
       </h2>
 
-      {/* 1. Onset Date */}
+      {/* 0. Patient Demographics & Renal Calculator */}
       <div className={styles.formSection}>
         <div className={styles.sectionLabel}>
-          <span>발병일자 (Onset Date)</span>
+          <span>환자 기본 정보 및 신기능 산출 (Demographics & CrCl)</span>
+        </div>
+        <div className={styles.inputRow}>
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>나이 (세)</label>
+            <input
+              type="number"
+              min="1"
+              max="120"
+              placeholder="예: 75"
+              className={styles.textInput}
+              style={{ width: '70px' }}
+              value={history.age ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseInt(e.target.value, 10);
+                setAge(val);
+              }}
+            />
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>성별</label>
+            <select
+              className={styles.selectInput}
+              style={{ width: '80px' }}
+              value={history.sex ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : (e.target.value as BiologicalSex);
+                setSex(val);
+              }}
+            >
+              <option value="">선택</option>
+              <option value="M">남성 (M)</option>
+              <option value="F">여성 (F)</option>
+            </select>
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>체중 (kg)</label>
+            <input
+              type="number"
+              min="20"
+              max="250"
+              step="0.5"
+              placeholder="예: 50"
+              className={styles.textInput}
+              style={{ width: '70px' }}
+              value={history.weightKg ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                setWeightKg(val);
+              }}
+            />
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>혈청 Cr (mg/dL)</label>
+            <input
+              type="number"
+              min="0.1"
+              max="20"
+              step="0.1"
+              placeholder="예: 1.0"
+              className={styles.textInput}
+              style={{ width: '80px' }}
+              value={history.serumCreatinine ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                setSerumCreatinine(val);
+              }}
+            />
+          </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>eGFR (검사결과)</label>
+            <input
+              type="number"
+              min="0"
+              max="150"
+              placeholder="예: 56"
+              className={styles.textInput}
+              style={{ width: '80px' }}
+              value={history.egfr ?? ''}
+              onChange={(e) => {
+                const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                setEgfr(val);
+              }}
+            />
+          </div>
+        </div>
+
+        {/* CrCl Cockcroft-Gault Comparison Display Box */}
+        {(history.crcl !== null || history.egfr !== null) && (
+          <div className={styles.renalResultBox}>
+            <div className={styles.renalComparisonRow}>
+              <div>
+                <strong>적용 신기능 지표: </strong>
+                {history.crcl !== null && (
+                  <span className={`${styles.renalTag} ${styles.renalTagCrcl}`}>
+                    CrCl: {history.crcl} mL/min (Cockcroft-Gault)
+                  </span>
+                )}
+                {history.egfr !== null && (
+                  <span className={`${styles.renalTag} ${styles.renalTagEgfr}`} style={{ marginLeft: '6px' }}>
+                    eGFR: {history.egfr} mL/min/1.73m²
+                  </span>
+                )}
+              </div>
+              <div style={{ display: 'flex', alignItems: 'center', gap: '4px' }}>
+                <span style={{ fontSize: '11px', color: 'var(--text-secondary)' }}>CrCl 수동조정:</span>
+                <input
+                  type="number"
+                  placeholder="mL/min"
+                  className={styles.textInput}
+                  style={{ width: '70px', padding: '2px 6px', fontSize: '11px' }}
+                  value={history.crcl ?? ''}
+                  onChange={(e) => {
+                    const val = e.target.value === '' ? null : parseFloat(e.target.value);
+                    setCrcl(val);
+                  }}
+                />
+              </div>
+            </div>
+            <div className={styles.renalHint}>
+              💡 <strong>CrCl vs eGFR 주의:</strong> 미국 FDA 허가 기준(발라시클로버, 아시클로버, 가바펜틴)은 Cockcroft-Gault CrCl 기준입니다. 고령·저체중 환자(예: 75세 여, 50kg, Cr 1.0)는 eGFR(56)보다 실제 CrCl(38)이 현저히 낮아 용량 감량이 필요합니다.
+            </div>
+          </div>
+        )}
+      </div>
+
+      {/* 1. Onset Date & New Vesicle Status */}
+      <div className={styles.formSection}>
+        <div className={styles.sectionLabel}>
+          <span>발병일자 (Onset Date) 및 진행 상태</span>
         </div>
         <div className={styles.inputRow}>
           <input
@@ -86,6 +225,17 @@ export const HistoryPanel: React.FC = () => {
           <button type="button" className={styles.quickBtn} onClick={() => handleQuickDate(5)}>
             5일 전
           </button>
+        </div>
+
+        <div style={{ marginTop: '4px' }}>
+          <div
+            className={`${styles.chip} ${styles.warningChip}`}
+            data-checked={history.newVesiclesEmerging}
+            onClick={() => setNewVesiclesEmerging(!history.newVesiclesEmerging)}
+          >
+            {history.newVesiclesEmerging ? '✓ ' : '+ '}
+            새로운 수포가 계속 형성 중 (72시간 초과 시에도 항바이러스제 강력 권고)
+          </div>
         </div>
       </div>
 
@@ -208,12 +358,12 @@ export const HistoryPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* 6. Risk Factors & Renal Panel */}
+      {/* 6. Risk Factors */}
       <div className={styles.formSection}>
         <div className={styles.sectionLabel}>
-          <span>기저질환 및 신기능 (Risk Factors & Renal)</span>
+          <span>기저질환 및 위험인자 (Risk Factors)</span>
         </div>
-        <div className={styles.chipGroup} style={{ marginBottom: '8px' }}>
+        <div className={styles.chipGroup}>
           {riskFactors.map((rf) => {
             const isChecked = history.riskFactors.includes(rf.id);
             return (
@@ -228,34 +378,6 @@ export const HistoryPanel: React.FC = () => {
               </div>
             );
           })}
-        </div>
-
-        <div className={styles.inputRow}>
-          <label style={{ fontSize: 'var(--font-size-xs)', color: 'var(--text-secondary)' }}>
-            eGFR:
-          </label>
-          <input
-            type="number"
-            min="0"
-            max="150"
-            placeholder="mL/min"
-            className={styles.textInput}
-            style={{ width: '90px' }}
-            value={history.egfr ?? ''}
-            onChange={(e) => {
-              const val = e.target.value === '' ? null : parseFloat(e.target.value);
-              setEgfr(val);
-            }}
-          />
-          <span style={{ fontSize: '11px', color: 'var(--text-muted)' }}>
-            {history.egfr === null
-              ? '미입력 (신기능 정상 가정)'
-              : history.egfr >= 60
-                ? '정상/경도 저하'
-                : history.egfr >= 30
-                  ? '⚠️ 중등도 저하 (용량 감량)'
-                  : '🚨 중증 저하/말기'}
-          </span>
         </div>
       </div>
     </div>

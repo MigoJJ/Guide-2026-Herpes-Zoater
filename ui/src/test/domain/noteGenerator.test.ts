@@ -13,7 +13,13 @@ describe('noteGenerator pure function', () => {
         painNrs: 6,
         prodrome: ['tingling', 'burning'],
         riskFactors: ['age_ge_50'],
+        age: 58,
+        sex: 'M',
+        weightKg: 68,
+        serumCreatinine: 0.9,
         egfr: 88,
+        crcl: 85,
+        newVesiclesEmerging: false,
         ocularSymptoms: false,
         hutchinsonSign: false,
         hearingSymptoms: false,
@@ -29,6 +35,7 @@ describe('noteGenerator pure function', () => {
     const note = generateNote(encounter, { locale: 'ko', referenceDate: fixedDate });
 
     expect(note).toContain('[S]');
+    expect(note).toContain('58세/남성/68kg');
     expect(note).toContain('우측(Right) T4 부위');
     expect(note).toContain('NRS 6/10');
     expect(note).toContain('작열감(화끈거림)');
@@ -57,7 +64,13 @@ describe('noteGenerator pure function', () => {
         painNrs: 8,
         prodrome: ['headache', 'fever'],
         riskFactors: [],
+        age: 62,
+        sex: 'F',
+        weightKg: 55,
+        serumCreatinine: 0.8,
         egfr: 95,
+        crcl: 68,
+        newVesiclesEmerging: false,
         ocularSymptoms: true,
         hutchinsonSign: true,
         hearingSymptoms: false,
@@ -71,7 +84,7 @@ describe('noteGenerator pure function', () => {
 
     expect(note).toContain('B02.30');
     expect(note).toContain('Herpes zoster ophthalmicus');
-    expect(note).toContain('안과(Ophthalmology) 당일 긴급 협진 의뢰');
+    expect(note).toContain('안과(Ophthalmology) 당일 즉시 응급 협진 의뢰');
   });
 
   it('generates Ramsay Hunt syndrome (B02.21) note with ENT/neuro referral', () => {
@@ -82,7 +95,13 @@ describe('noteGenerator pure function', () => {
         painNrs: 7,
         prodrome: ['malaise'],
         riskFactors: [],
+        age: 50,
+        sex: 'M',
+        weightKg: 75,
+        serumCreatinine: 1.0,
         egfr: 80,
+        crcl: 85,
+        newVesiclesEmerging: false,
         ocularSymptoms: false,
         hutchinsonSign: false,
         hearingSymptoms: true,
@@ -107,7 +126,13 @@ describe('noteGenerator pure function', () => {
         painNrs: 5,
         prodrome: ['fever'],
         riskFactors: ['immunocompromised'],
+        age: 65,
+        sex: 'M',
+        weightKg: 60,
+        serumCreatinine: 1.1,
         egfr: 60,
+        crcl: 55,
+        newVesiclesEmerging: true,
         ocularSymptoms: false,
         hutchinsonSign: false,
         hearingSymptoms: false,
@@ -118,17 +143,18 @@ describe('noteGenerator pure function', () => {
         { dermatome: 'T7', side: 'L' },
         { dermatome: 'L2', side: 'L' },
       ],
-      treatments: [{ drugId: 'acyclovir_iv' }],
+      treatments: [{ drugId: 'acyclovir_iv', ivIndication: 'disseminated_immunocompromised' }],
     };
 
     const note = generateNote(encounter, { locale: 'ko', referenceDate: fixedDate });
 
     expect(note).toContain('B02.7');
     expect(note).toContain('Disseminated herpes zoster');
-    expect(note).toContain('내과 입원 격리 및 IV Acyclovir');
+    expect(note).toContain('내과 입원(공기/접촉 격리 병실) 및 정맥주사');
+    expect(note).toContain('600 mg (10 mg/kg)');
   });
 
-  it('reflects renal dose adjustment when eGFR is impaired', () => {
+  it('reflects CrCl Cockcroft-Gault renal dose adjustment in note', () => {
     const encounter: Encounter = {
       history: {
         onsetDate: '2026-10-24',
@@ -136,7 +162,13 @@ describe('noteGenerator pure function', () => {
         painNrs: 5,
         prodrome: [],
         riskFactors: ['ckd'],
-        egfr: 35,
+        age: 75,
+        sex: 'F',
+        weightKg: 50,
+        serumCreatinine: 1.0,
+        egfr: 56,
+        crcl: 38.4,
+        newVesiclesEmerging: false,
         ocularSymptoms: false,
         hutchinsonSign: false,
         hearingSymptoms: false,
@@ -148,8 +180,8 @@ describe('noteGenerator pure function', () => {
 
     const note = generateNote(encounter, { locale: 'ko', referenceDate: fixedDate });
 
-    expect(note).toContain('eGFR 35 mL/min/1.73m² (신기능 저하 상태)');
+    expect(note).toContain('CrCl(Cockcroft-Gault): 38.4 mL/min');
     expect(note).toContain('1000 mg PO BID');
-    expect(note).toContain('[신기능 용량 조절됨]');
+    expect(note).toContain('[CrCl 기준 용량 감량됨]');
   });
 });

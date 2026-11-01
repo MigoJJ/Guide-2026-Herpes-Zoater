@@ -31,6 +31,38 @@
   color: var(--text-secondary);
   border-bottom: 1px solid var(--border-light);
   padding-bottom: 4px;
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.subgroupHeader {
+  font-size: 11px;
+  font-weight: var(--font-weight-bold);
+  color: var(--text-muted);
+  text-transform: uppercase;
+  letter-spacing: 0.5px;
+  margin-top: 4px;
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+}
+
+.stepDownBtn {
+  font-size: 11px;
+  padding: 3px 8px;
+  border: 1px solid var(--color-primary);
+  background-color: var(--color-primary-light);
+  color: var(--color-primary);
+  border-radius: var(--radius-sm);
+  cursor: pointer;
+  font-weight: var(--font-weight-semibold);
+  transition: all var(--transition-fast);
+}
+
+.stepDownBtn:hover {
+  background-color: var(--color-primary);
+  color: var(--text-inverse);
 }
 
 .cardsList {
@@ -59,6 +91,8 @@
   display: flex;
   justify-content: space-between;
   align-items: center;
+  flex-wrap: wrap;
+  gap: 6px;
 }
 
 .drugNameArea {
@@ -67,16 +101,18 @@
   gap: 8px;
 }
 
-.checkbox {
+.inputControl {
   width: 16px;
   height: 16px;
   cursor: pointer;
+  accent-color: var(--color-primary);
 }
 
 .drugName {
   font-size: var(--font-size-sm);
   font-weight: var(--font-weight-bold);
   color: var(--text-main);
+  cursor: pointer;
 }
 
 .doseBadge {
@@ -121,6 +157,7 @@
   margin-top: 4px;
   margin-left: 24px;
   font-size: var(--font-size-xs);
+  flex-wrap: wrap;
 }
 
 .overrideInput {
@@ -130,4 +167,36 @@
   border-radius: var(--radius-sm);
   background-color: var(--bg-surface);
   color: var(--text-main);
+}
+
+.selectInput {
+  padding: 3px 6px;
+  font-size: 11px;
+  border: 1px solid var(--border-medium);
+  border-radius: var(--radius-sm);
+  background-color: var(--bg-surface);
+  color: var(--text-main);
+}
+
+.prnToggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 11px;
+  font-weight: var(--font-weight-semibold);
+  color: var(--text-secondary);
+  cursor: pointer;
+}
+
+.safetyAlertBanner {
+  background-color: var(--color-warning-bg);
+  border: 1px solid var(--color-warning-border);
+  color: var(--color-warning-text);
+  padding: 8px 12px;
+  border-radius: var(--radius-md);
+  font-size: var(--font-size-xs);
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  line-height: 1.4;
 }
