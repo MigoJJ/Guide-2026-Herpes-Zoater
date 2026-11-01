@@ -236,10 +236,25 @@ export const TreatmentPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Topicals */}
+      {/* 4. Glucocorticoids (Steroids - Limited Indications) */}
       <div className={styles.categoryGroup}>
         <div className={styles.categoryHeader}>
-          <span>4. 국소 외용제 (Topical Agents)</span>
+          <span>4. 전신 스테로이드 (Oral Glucocorticoid - 일상적 사용 비권장, 제한적 고려)</span>
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '2px 4px', lineHeight: 1.4 }}>
+          ℹ️ <strong>임상 적응증:</strong> Ramsay Hunt 증후군(안면마비) 또는 면역정상 성인의 심한 급성 신경염 통증에 한해 <strong>항바이러스제와 반드시 병용</strong>하여 1~2주 단기 감량 요법(Prednisolone 50mg/d → 감량) 고려.
+          <br />
+          🚨 <strong>금기/비권장:</strong> 면역저하자, 파종성 대상포진, 항바이러스제 없는 단독 투여 절대 금기. <strong>PHN(대상포진후신경통) 예방 효과는 입증되지 않음</strong> (Cochrane 2023, UpToDate Grade 2C). 국소 스테로이드 연고 병변 도포 금기.
+        </div>
+        <div className={styles.cardsList}>
+          {['steroid_prednisolone'].map((id) => renderDrugCard(id))}
+        </div>
+      </div>
+
+      {/* 5. Topicals */}
+      <div className={styles.categoryGroup}>
+        <div className={styles.categoryHeader}>
+          <span>5. 국소 외용제 (Topical Agents)</span>
         </div>
         <div className={styles.cardsList}>
           {['calamine_lotion', 'lidocaine_patch'].map((id) => renderDrugCard(id))}

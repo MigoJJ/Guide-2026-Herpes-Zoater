@@ -1,8 +1,7 @@
 # Guide-2026-Herpes-Zoater
-
+Resume this session with:
  gemini --resume d52a6eb0-0045-4da4-b59a-ac84333e147d
-
-대상포진(Herpes Zoster, Shingles) 임상 진료 지원 및 EMR 표준 차팅 자동 생성 시스템 (2026)
+ claude --resume 5ebc04d9-f842-4a84-998e-5d077c82d49c
 
 ## 개요 (Overview)
 본 시스템은 대상포진 환자 진료 시 의사의 의사결정을 돕고 표준화된 의무기록 생성을 지원하는 보조 UI 웹 애플리케이션입니다.
@@ -28,14 +27,16 @@
 ## 실행 방법 (Getting Started)
 
 ```bash
-# UI 디렉터리 이동
-cd ui
-
-# 의존성 설치
+# UI 실행
+cd ittia/HerpesZoster/ui
 npm install
-
-# 개발 서버 실행
 npm run dev
+
+npm run dev -- --host
+  ➜  Local:   http://localhost:5173/
+  ➜  Network: http://175.209.193.88:5173/
+  ➜  Network: http://172.16.189.1:5173/
+  ➜  Network: http://172.16.117.1:5173/
 
 # 단위/컴포넌트 테스트 실행
 npm test

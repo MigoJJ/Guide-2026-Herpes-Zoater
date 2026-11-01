@@ -263,4 +263,40 @@ describe('noteGenerator pure function', () => {
     expect(note).not.toContain('이부프로펜 (Ibuprofen 400mg): 400 mg PO TID pc × 7일 [CrCl 기준 용량 감량됨]');
     expect(note).toContain('[신기능 주의: 신독성 위험]');
   });
+
+  it('includes oral Prednisolone instructions and diabetes warning in note', () => {
+    const encounter: Encounter = {
+      history: {
+        onsetDate: '2026-10-24',
+        rashStage: 'vesicular',
+        painNrs: 8,
+        prodrome: ['burning'],
+        riskFactors: ['diabetes'],
+        age: 55,
+        sex: 'M',
+        weightKg: 70,
+        serumCreatinine: 0.9,
+        egfr: 90,
+        crcl: 90,
+        isCrclManual: false,
+        newVesiclesEmerging: false,
+        ocularSymptoms: false,
+        hutchinsonSign: false,
+        hearingSymptoms: false,
+        facialPalsy: false,
+      },
+      lesions: [{ dermatome: 'T4', side: 'R' }],
+      treatments: [
+        { drugId: 'valacyclovir' },
+        { drugId: 'steroid_prednisolone' },
+      ],
+    };
+
+    const note = generateNote(encounter, { locale: 'ko', referenceDate: fixedDate });
+
+    expect(note).toContain('프레드니솔론');
+    expect(note).toContain('[전신 스테로이드]');
+    expect(note).toContain('테이퍼링');
+    expect(note).toContain('[당뇨 환자] 스테로이드 복용 중 급격한 혈당 상승 위험');
+  });
 });

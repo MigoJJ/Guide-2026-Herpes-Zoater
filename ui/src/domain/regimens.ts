@@ -10,6 +10,9 @@ export const REGIMEN_METADATA = {
     'MFDS (식품의약품안전처) 의약품 허가사항: 팜비어정 250mg (famciclovir)',
     'FDA Drug Safety Communication (2019): Gabapentinoids & Opioid Respiratory Depression Warning',
     'Cockcroft-Gault Creatinine Clearance Estimation Standards',
+    'UpToDate: Treatment of herpes zoster - Corticosteroids in acute herpes zoster (Grade 2C)',
+    'NICE CKS: Shingles - Oral Corticosteroids for severe acute pain',
+    'Cochrane Systematic Review (2023): Corticosteroids for preventing postherpetic neuralgia',
   ],
   disclaimer:
     '본 처방 가이드는 보조 정보 제공을 목적으로 하며, 환자의 신기능(CrCl/eGFR), 체중, 동반 질환 및 약물 상호작용에 따른 최종 처방 및 용량 결정 책임은 처방의에게 있습니다.',
@@ -108,6 +111,17 @@ export const DRUG_REGIMENS: Record<string, DrugRegimen> = {
     standardDurationDays: 14,
     route: 'IV',
     notes: '아시클로버 내성/치료 불응 시 2차 치료제. 신기능 감량 필수(mL/min/kg 기준), 전해질(Ca, Mg, K, P) 및 QT 연장 모니터링.',
+  },
+  steroid_prednisolone: {
+    id: 'steroid_prednisolone',
+    nameKo: '경구 스테로이드: 프레드니솔론 (Prednisolone 50mg → 감량)',
+    nameEn: 'Prednisolone Oral (Glucocorticoid 50mg/d Tapering)',
+    category: 'steroid',
+    standardDose: '50 mg → 감량',
+    standardFrequency: 'PO QD 아침 식후 (1주차 50mg → 2주차 25mg 후 중단)',
+    standardDurationDays: 14,
+    route: 'PO',
+    notes: '일상적 권장 안 됨. Ramsay Hunt 증후군(안면마비) 또는 면역정상인의 극심한 급성 통증 시 항바이러스제와 병용하여 1~2주 단기 사용. (면역저하자/파종성/단독투여 금기, PHN 예방 효과 없음).',
   },
   pregabalin: {
     id: 'pregabalin',
@@ -608,6 +622,19 @@ export function calculateAdjustedDose(
         renalWarning: `${metricName} ${primaryRenalValue} mL/min: 신기능 저하 환자에서 NSAID 사용은 신독성 및 급성 신손상(AKI) 위험이 높으므로 아세트아미노펜 단독 제제 대체 권고.`,
       };
     }
+  }
+
+  // 11. Oral Glucocorticoid (Prednisolone)
+  if (drugId === 'steroid_prednisolone') {
+    return {
+      dose: '50 mg → 25 mg',
+      frequency: 'PO QD 아침 식후 (1주차 50mg/d → 2주차 25mg/d 점진적 감량 후 중단)',
+      durationDays: 14,
+      isAdjusted: false,
+      renalMetricUsed: 'Standard',
+      renalWarning:
+        '반드시 항바이러스제와 병용하십시오. 면역저하자·파종성 환자 금기. 당뇨 환자 혈당 급상승 주의 및 위장관 보호제(PPI) 병용 검토.',
+    };
   }
 
   return {

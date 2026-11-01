@@ -165,4 +165,12 @@ describe('regimens domain & renal adjustment', () => {
     expect(nsaidCkd.isAdjusted).toBe(false);
     expect(nsaidCkd.renalWarning).toContain('신독성');
   });
+
+  it('provides oral Prednisolone tapering regimen and clinical warnings', () => {
+    const pred = calculateAdjustedDose('steroid_prednisolone', null);
+    expect(pred.dose).toContain('50 mg');
+    expect(pred.frequency).toContain('감량');
+    expect(pred.durationDays).toBe(14);
+    expect(pred.renalWarning).toContain('항바이러스제와 병용');
+  });
 });

@@ -393,6 +393,16 @@ function buildPlan(
     parts.push('  - [면역저하자] 모든 병변이 완전히 가피(딱지)화될 때까지 항바이러스제 치료 기간을 연장하여 지속 투여함.');
   }
 
+  const hasSteroid = treatments.some((t) => t.drugId === 'steroid_prednisolone');
+  if (hasSteroid) {
+    parts.push(
+      '  - [전신 스테로이드] 급성기 신경염 통증 완화 및 안면신경 회복을 위한 1~2주 단기 요법이며, 대상포진후신경통(PHN) 예방 효과는 없음을 설명함. 임의 중단 금지 및 테이퍼링 감량 일정 안내.'
+    );
+    if (history.riskFactors.includes('diabetes')) {
+      parts.push('  - [당뇨 환자] 스테로이드 복용 중 급격한 혈당 상승 위험이 있으므로 자가 혈당 측정을 매일 시행하도록 지도함.');
+    }
+  }
+
   const hasGabapentinoid = treatments.some((t) => ['pregabalin', 'gabapentin'].includes(t.drugId));
   if (hasGabapentinoid) {
     parts.push('  - [신경통 조절제] 14일 투여 후 급성 통증 완화 정도를 재평가하며, 투약 중단 시 금단 증상 예방을 위해 점진적 감량(Tapering)을 진행함.');

@@ -169,6 +169,55 @@ export function evaluateRedFlags(encounter: Encounter, todayDate = new Date()): 
     });
   }
 
+  // 9. Glucocorticoid (Steroid) Safety & Contraindication Rules
+  const hasSteroid = treatments.some((t) => t.drugId === 'steroid_prednisolone');
+  const hasAnyAntiviral = treatments.some((t) =>
+    [
+      'valacyclovir',
+      'famciclovir',
+      'famvir_kr_250',
+      'acyclovir_oral',
+      'acyclovir_iv',
+      'foscarnet_iv',
+    ].includes(t.drugId)
+  );
+
+  if (hasSteroid && !hasAnyAntiviral) {
+    alerts.push({
+      id: 'redflag-steroid-solitary',
+      severity: 'critical',
+      title: '🚨 스테로이드 단독 사용 금기 (항바이러스제 병용 필수)',
+      message:
+        '항바이러스제 없이 스테로이드만 단독 투여하면 숙주 면역 억제로 인해 바이러스 증식 및 급격한 체내 확산 위험이 발생합니다.',
+      recommendation:
+        '반드시 항바이러스제(발라시클로버, 팜시클로버 등)와 병용하거나 스테로이드 처방을 취소하십시오.',
+    });
+  }
+
+  if (hasSteroid && (isImmunocompromised || uniqueDermatomes.size >= 3 || hasBilateral)) {
+    alerts.push({
+      id: 'redflag-steroid-immunocompromised',
+      severity: 'critical',
+      title: '🚨 면역저하자 / 파종성 대상포진 전신 스테로이드 금기',
+      message:
+        '면역저하 상태(항암, 면역억제제 등) 또는 파종성 대상포진 환자에게 전신 스테로이드를 투여하면 치명적인 바이러스혈증 및 내장 침범(폐렴, 뇌염)을 촉진합니다.',
+      recommendation:
+        '전신 스테로이드 투여를 즉시 중단하고 고용량 정맥 항바이러스제(IV Acyclovir) 치료를 유지하십시오.',
+    });
+  }
+
+  if (hasSteroid && history.riskFactors.includes('diabetes')) {
+    alerts.push({
+      id: 'warning-steroid-diabetes',
+      severity: 'warning',
+      title: '⚠️ 스테로이드 투여로 인한 혈당 급상승(고혈당증) 주의',
+      message:
+        '당뇨병 기저질환자에게 프레드니솔론 고용량 투여 시 인슐린 저항성이 급증하여 혈당이 크게 치솟을 수 있습니다.',
+      recommendation:
+        '치료 기간 중 엄격한 혈당 모니터링 및 당뇨 약제/인슐린 용량 조절을 병행하고, 위장관 보호제(PPI) 병용을 검토하십시오.',
+    });
+  }
+
   // Sort: critical first, then warning, then info
   const severityWeight: Record<Alert['severity'], number> = {
     critical: 0,

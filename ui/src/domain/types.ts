@@ -103,6 +103,7 @@ export interface DermatomeMetadata {
 export type DrugCategory =
   | 'antiviral_oral'
   | 'antiviral_iv'
+  | 'steroid'
   | 'neuropathic_analgesic'
   | 'nsaid_analgesic'
   | 'topical';
