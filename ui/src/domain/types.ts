@@ -57,6 +57,7 @@ export interface History {
   serumCreatinine: number | null; // mg/dL
   egfr: number | null; // mL/min/1.73m² (CKD-EPI)
   crcl: number | null; // mL/min (Cockcroft-Gault)
+  isCrclManual: boolean; // 의사 수동 입력 여부
   newVesiclesEmerging: boolean; // 새 수포가 계속 생성 중인지 여부 (72시간 경과 후 항바이러스제 적응증)
   // Red Flag Signs
   ocularSymptoms: boolean; // Eye pain, redness, blurred vision

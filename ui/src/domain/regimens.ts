@@ -237,16 +237,24 @@ export function calculateAdjustedDose(
         primaryRenalValue !== null &&
         primaryRenalValue >= 50 &&
         primaryRenalValue <= 59;
+
+      let warning: string | undefined = undefined;
+      if (nearThreshold) {
+        warning = `신기능 수치(${metricName} ${primaryRenalValue} mL/min)가 감량 기준(50)에 근접하므로 신경독성(섬망, 환각, 혼돈) 모니터링이 필요합니다.`;
+      } else if (ctx.age !== null && ctx.age !== undefined && ctx.age >= 65) {
+        warning =
+          primaryRenalValue !== null
+            ? `고령자(${ctx.age}세, ${metricName} ${primaryRenalValue} mL/min)이므로 발라시클로버 신경독성(섬망, 환각) 모니터링이 필요합니다.`
+            : `고령자(${ctx.age}세)이므로 신기능(CrCl/eGFR) 확인 및 발라시클로버 신경독성(섬망, 환각) 모니터링이 필요합니다.`;
+      }
+
       return {
         dose: '1000 mg',
         frequency: 'PO TID (하루 3회)',
         durationDays: 7,
         isAdjusted: false,
         renalMetricUsed: metricName,
-        renalWarning:
-          nearThreshold || (ctx.age !== null && ctx.age !== undefined && ctx.age >= 65)
-            ? `신기능 수치(${metricName} ${primaryRenalValue} mL/min)가 감량 기준(50)에 근접하거나 고령자이므로 신경독성(섬망, 환각, 혼돈) 모니터링이 필요합니다.`
-            : undefined,
+        renalWarning: warning,
       };
     } else if (primaryRenalValue >= 30) {
       return {
@@ -273,7 +281,7 @@ export function calculateAdjustedDose(
         durationDays: 7,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10, 말기): 표준 TID → 감량 500mg QD 권장.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 500mg QD로 감량 권장 (혈액투석 환자는 투석 후 투여).`,
       };
     }
   }
@@ -349,11 +357,11 @@ export function calculateAdjustedDose(
     } else {
       return {
         dose: '250 mg',
-        frequency: '혈액투석 직후 단회 투여',
+        frequency: 'PO q48h (이틀에 1회) 또는 투석 직후 단회 투여',
         durationDays: 7,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (혈액투석): 250mg을 투석 직후 단회 투여.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 250mg을 이틀에 1회(q48h) 투여하며, 혈액투석 환자는 투석 직후 단회 투여 권장.`,
       };
     }
   }
@@ -391,90 +399,98 @@ export function calculateAdjustedDose(
 
   // 5. Acyclovir IV
   if (drugId === 'acyclovir_iv') {
-    const weight = ctx.weightKg && ctx.weightKg > 0 ? ctx.weightKg : 60; // Default 60kg if not entered
-    const calculatedMg = Math.round(weight * 10);
+    const weight = ctx.weightKg;
+    const calculatedMg = typeof weight === 'number' && weight > 0 ? Math.round(weight * 10) : undefined;
+    const doseLabel = calculatedMg !== undefined ? `${calculatedMg} mg (10 mg/kg)` : '10 mg/kg (체중 입력 필요)';
+    const weightWarning = calculatedMg !== undefined ? '' : '⚠️ 체중(kg)을 입력하면 1회 투여량이 mg으로 자동 계산됩니다.';
 
     // Duration based on indication
     let defaultDuration = 7;
     let indicationNote = '';
     if (ctx.ivIndication === 'cns_involvement') {
       defaultDuration = 14;
-      indicationNote = '중추신경계 침범: 10~15 mg/kg × 10~14일';
+      indicationNote = '중추신경계 침범: 10~15 mg/kg × 10~14일.';
     } else if (ctx.ivIndication === 'acute_retinal_necrosis') {
       defaultDuration = 14;
-      indicationNote = '급성망막괴사(ARN): 10~15 mg/kg × 10~14일 후 경구 수주간 유지';
+      indicationNote = '급성망막괴사(ARN): 10~15 mg/kg × 10~14일 후 경구 수주간 유지.';
     } else if (ctx.ivIndication === 'disseminated_immunocompromised') {
       defaultDuration = 7;
-      indicationNote = '면역저하/파종성: 7~10일 투여 후 경구 전환';
+      indicationNote = '면역저하/파종성: 7~10일 투여 후 경구 전환.';
     }
+
+    const combinedNote = [weightWarning, indicationNote].filter(Boolean).join(' ');
 
     if (primaryRenalValue === null || primaryRenalValue > 50) {
       return {
-        dose: `${calculatedMg} mg (10 mg/kg)`,
+        dose: doseLabel,
         frequency: 'IV q8h (1시간 이상 점적)',
         durationDays: defaultDuration,
         isAdjusted: false,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: indicationNote || undefined,
+        renalWarning: combinedNote || undefined,
       };
     } else if (primaryRenalValue >= 25) {
       return {
-        dose: `${calculatedMg} mg (10 mg/kg)`,
+        dose: doseLabel,
         frequency: 'IV q12h (12시간마다 점적)',
         durationDays: defaultDuration,
         isAdjusted: true,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (25~50): 아시클로버 IV 간격을 q12h로 연장 권장. ${indicationNote}`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (25~50): 아시클로버 IV 간격을 q12h로 연장 권장. ${combinedNote}`.trim(),
       };
     } else if (primaryRenalValue >= 10) {
       return {
-        dose: `${calculatedMg} mg (10 mg/kg)`,
+        dose: doseLabel,
         frequency: 'IV q24h (24시간마다 점적)',
         durationDays: defaultDuration,
         isAdjusted: true,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (10~24): 아시클로버 IV 간격을 q24h로 연장 권장. ${indicationNote}`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (10~24): 아시클로버 IV 간격을 q24h로 연장 권장. ${combinedNote}`.trim(),
       };
     } else {
-      const halvedMg = Math.round(weight * 5);
+      const halvedMg = typeof weight === 'number' && weight > 0 ? Math.round(weight * 5) : undefined;
+      const halvedLabel = halvedMg !== undefined ? `${halvedMg} mg (5 mg/kg)` : '5 mg/kg (체중 입력 필요)';
       return {
-        dose: `${halvedMg} mg (5 mg/kg)`,
+        dose: halvedLabel,
         frequency: 'IV q24h (24시간마다 점적)',
         durationDays: defaultDuration,
         isAdjusted: true,
         renalMetricUsed: metricName,
         weightAdjustedMg: halvedMg,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 용량 5mg/kg q24h로 감량 권장. ${indicationNote}`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 용량 5mg/kg q24h로 감량 권장. ${combinedNote}`.trim(),
       };
     }
   }
 
   // 6. Foscarnet IV
   if (drugId === 'foscarnet_iv') {
-    const weight = ctx.weightKg && ctx.weightKg > 0 ? ctx.weightKg : 60;
-    const calculatedMg = Math.round(weight * 40);
+    const weight = ctx.weightKg;
+    const calculatedMg = typeof weight === 'number' && weight > 0 ? Math.round(weight * 40) : undefined;
+    const doseLabel = calculatedMg !== undefined ? `${calculatedMg} mg (40 mg/kg)` : '40-60 mg/kg (체중 입력 필요)';
+    const weightWarning = calculatedMg !== undefined ? '' : '⚠️ 체중(kg)이 입력되지 않았습니다.';
 
     if (primaryRenalValue === null || primaryRenalValue >= 60) {
       return {
-        dose: `${calculatedMg} mg (40 mg/kg)`,
+        dose: doseLabel,
         frequency: 'IV q8h (1-2시간 점적)',
         durationDays: 14,
         isAdjusted: false,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
+        renalWarning: weightWarning || undefined,
       };
     } else {
       return {
-        dose: `${calculatedMg} mg`,
+        dose: doseLabel,
         frequency: '원내 약제부 신기능 환산 협진 필수',
         durationDays: 14,
         isAdjusted: true,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min: 포스카넷은 mL/min/kg 단위의 복잡한 감량표가 적용되므로 약제부 임상 협진을 의뢰하십시오. 전해질(칼슘, 마그네슘, 칼륨, 인) 및 QT 연장 모니터링 필수.`,
+        renalWarning: `${weightWarning ? weightWarning + ' ' : ''}${metricName} ${primaryRenalValue} mL/min: 포스카넷은 mL/min/kg 단위의 복잡한 감량표가 적용되므로 약제부 임상 협진을 의뢰하십시오. 전해질(칼슘, 마그네슘, 칼륨, 인) 및 QT 연장 모니터링 필수.`,
       };
     }
   }
@@ -510,11 +526,11 @@ export function calculateAdjustedDose(
     } else {
       return {
         dose: '25 mg',
-        frequency: 'PO QD (투석 후 단회)',
+        frequency: 'PO QD (투석 환자는 투석 후 보충)',
         durationDays: 14,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<15): 프레가발린 25mg QD 감량 권장.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<15): 프레가발린 25mg QD 감량 권장 (혈액투석 환자는 투석 직후 보충 투여).`,
       };
     }
   }
@@ -531,30 +547,30 @@ export function calculateAdjustedDose(
       };
     } else if (primaryRenalValue >= 30) {
       return {
-        dose: '200-700 mg/day',
-        frequency: 'PO BID (나눠 투여, 초기 300mg QHS 시작)',
+        dose: '300 mg',
+        frequency: 'PO QHS (취침 전 시작, 필요시 최대 1400mg/day까지 BID 분할 증량)',
         durationDays: 14,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (30~59): 가바펜틴 초기 300mg QHS로 시작, 증량 시 최대 1400mg/day(BID 분할) 상한 준수.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (30~59): 가바펜틴 초기 300mg QHS로 시작, 증량 시 최대 1400mg/day(BID 분할) 상한 준수 (정상인 기준인 3600mg까지 무리하게 올리지 않음).`,
       };
     } else if (primaryRenalValue >= 15) {
       return {
-        dose: '200-700 mg/day',
-        frequency: 'PO QD (하루 1회)',
+        dose: '200-300 mg',
+        frequency: 'PO QD (하루 1회, 최대 700mg/day)',
         durationDays: 14,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (15~29): 가바펜틴 하루 최대 700mg QD 상한 준수.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (15~29): 가바펜틴 200~700mg/day QD 범위, 하루 최대 700mg 상한 준수.`,
       };
     } else {
       return {
         dose: '100-300 mg',
-        frequency: '투석 후 단회 투여',
+        frequency: 'PO QD (하루 1회; 혈액투석 환자는 투석 후 보충 투여)',
         durationDays: 14,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<15): 투석 직후 100~300mg 단회 투여.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<15): 가바펜틴 100~300mg/day QD 투여하며, 혈액투석 환자는 투석 직후 보충 투여(125~350mg).`,
       };
     }
   }
@@ -587,9 +603,9 @@ export function calculateAdjustedDose(
         dose: '400 mg',
         frequency: 'PO TID pc',
         durationDays: 7,
-        isAdjusted: true,
+        isAdjusted: false, // NSAIDs are not dose-reduced; cautioned or replaced
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min: 신기능 저하 환자에서 NSAID 사용은 급성 신손상(AKI) 위험이 높으므로 아세트아미노펜 단독 제제 대체 권고.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min: 신기능 저하 환자에서 NSAID 사용은 신독성 및 급성 신손상(AKI) 위험이 높으므로 아세트아미노펜 단독 제제 대체 권고.`,
       };
     }
   }

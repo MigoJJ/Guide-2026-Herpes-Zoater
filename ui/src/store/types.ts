@@ -26,6 +26,7 @@ export interface HistorySlice {
   setSerumCreatinine: (cr: number | null) => void;
   setEgfr: (egfr: number | null) => void;
   setCrcl: (crcl: number | null) => void;
+  resetCrclToAuto: () => void;
   setNewVesiclesEmerging: (val: boolean) => void;
   // Red Flag Signs
   setOcularSymptoms: (val: boolean) => void;

@@ -5,7 +5,7 @@ import { calculateCockcroftGault } from '../domain/regimens';
 
 export const initialHistory: History = {
   onsetDate: null,
-  rashStage: 'vesicular',
+  rashStage: null, // Starts blank (null) until selected by doctor
   painNrs: null,
   prodrome: [],
   riskFactors: [],
@@ -15,6 +15,7 @@ export const initialHistory: History = {
   serumCreatinine: null,
   egfr: null,
   crcl: null,
+  isCrclManual: false,
   newVesiclesEmerging: false,
   ocularSymptoms: false,
   hutchinsonSign: false,
@@ -24,6 +25,12 @@ export const initialHistory: History = {
 
 function autoComputeCrCl(h: History): number | null {
   return calculateCockcroftGault(h.age, h.sex, h.weightKg, h.serumCreatinine);
+}
+
+function updateCrclIfAuto(history: History) {
+  if (!history.isCrclManual) {
+    history.crcl = autoComputeCrCl(history);
+  }
 }
 
 export const createHistorySlice: StateCreator<
@@ -72,40 +79,43 @@ export const createHistorySlice: StateCreator<
   setAge: (age) =>
     set((state) => {
       state.history.age = age;
-      if (age !== null && age >= 50 && !state.history.riskFactors.includes('age_ge_50')) {
-        state.history.riskFactors.push('age_ge_50');
+      if (age !== null) {
+        if (age >= 50) {
+          if (!state.history.riskFactors.includes('age_ge_50')) {
+            state.history.riskFactors.push('age_ge_50');
+          }
+        } else {
+          // If age is under 50, automatically remove the age_ge_50 flag
+          state.history.riskFactors = state.history.riskFactors.filter(
+            (rf) => rf !== 'age_ge_50'
+          );
+        }
+      } else {
+        // If age is cleared, remove the age_ge_50 flag
+        state.history.riskFactors = state.history.riskFactors.filter(
+          (rf) => rf !== 'age_ge_50'
+        );
       }
-      const computed = autoComputeCrCl(state.history);
-      if (computed !== null) {
-        state.history.crcl = computed;
-      }
+
+      updateCrclIfAuto(state.history);
     }),
 
   setSex: (sex) =>
     set((state) => {
       state.history.sex = sex;
-      const computed = autoComputeCrCl(state.history);
-      if (computed !== null) {
-        state.history.crcl = computed;
-      }
+      updateCrclIfAuto(state.history);
     }),
 
   setWeightKg: (weight) =>
     set((state) => {
       state.history.weightKg = weight;
-      const computed = autoComputeCrCl(state.history);
-      if (computed !== null) {
-        state.history.crcl = computed;
-      }
+      updateCrclIfAuto(state.history);
     }),
 
   setSerumCreatinine: (cr) =>
     set((state) => {
       state.history.serumCreatinine = cr;
-      const computed = autoComputeCrCl(state.history);
-      if (computed !== null) {
-        state.history.crcl = computed;
-      }
+      updateCrclIfAuto(state.history);
     }),
 
   setEgfr: (egfr) =>
@@ -115,7 +125,20 @@ export const createHistorySlice: StateCreator<
 
   setCrcl: (crcl) =>
     set((state) => {
-      state.history.crcl = crcl;
+      if (crcl !== null) {
+        state.history.crcl = crcl;
+        state.history.isCrclManual = true;
+      } else {
+        // If user clears manual CrCl input, fall back to auto-calculation
+        state.history.isCrclManual = false;
+        state.history.crcl = autoComputeCrCl(state.history);
+      }
+    }),
+
+  resetCrclToAuto: () =>
+    set((state) => {
+      state.history.isCrclManual = false;
+      state.history.crcl = autoComputeCrCl(state.history);
     }),
 
   setNewVesiclesEmerging: (val) =>

@@ -297,7 +297,7 @@ export const DermatomeMap: React.FC = () => {
                               <button
                                 type="button"
                                 className={styles.sideBtn}
-                                data-active={selectedSide === 'R'}
+                                data-active={selectedSide === 'R' || selectedSide === 'Bilateral'}
                                 onClick={() => toggleLesion(meta.id, 'R')}
                                 title="우측 선택"
                               >
@@ -306,7 +306,7 @@ export const DermatomeMap: React.FC = () => {
                               <button
                                 type="button"
                                 className={styles.sideBtn}
-                                data-active={selectedSide === 'L'}
+                                data-active={selectedSide === 'L' || selectedSide === 'Bilateral'}
                                 onClick={() => toggleLesion(meta.id, 'L')}
                                 title="좌측 선택"
                               >
