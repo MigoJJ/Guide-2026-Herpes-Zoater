@@ -17,7 +17,7 @@ export const useEncounterStore = create<EncounterStore>()(
       set((state) => {
         state.history = { ...initialHistory };
         state.lesions = [];
-        state.treatments = [{ drugId: 'valacyclovir' }];
+        state.treatments = []; // Blank
       });
     },
 

@@ -6,19 +6,53 @@ describe('useEncounterStore Zustand store', () => {
     useEncounterStore.getState().resetAll();
   });
 
-  it('toggles lesions correctly and updates side', () => {
+  it('starts with blank rashStage and empty treatments (Problem 17 fix)', () => {
+    const { history, treatments, lesions } = useEncounterStore.getState();
+    expect(history.rashStage).toBeNull();
+    expect(treatments).toEqual([]);
+    expect(lesions).toEqual([]);
+  });
+
+  it('allows both sides involved by toggling Left then Right into Bilateral (Problem 15 fix)', () => {
     const { toggleLesion } = useEncounterStore.getState();
 
-    toggleLesion('T4', 'R');
-    expect(useEncounterStore.getState().lesions).toEqual([{ dermatome: 'T4', side: 'R' }]);
-
-    // Toggling with different side updates side
+    // 1. Click Left T4
     toggleLesion('T4', 'L');
     expect(useEncounterStore.getState().lesions).toEqual([{ dermatome: 'T4', side: 'L' }]);
 
-    // Toggling with same side removes it
+    // 2. Click Right T4 -> Both sides involved! (Upgrades to Bilateral)
+    toggleLesion('T4', 'R');
+    expect(useEncounterStore.getState().lesions).toEqual([{ dermatome: 'T4', side: 'Bilateral' }]);
+
+    // 3. Toggle Left off -> Right remains!
     toggleLesion('T4', 'L');
+    expect(useEncounterStore.getState().lesions).toEqual([{ dermatome: 'T4', side: 'R' }]);
+
+    // 4. Toggle Right off -> Removed completely
+    toggleLesion('T4', 'R');
     expect(useEncounterStore.getState().lesions).toEqual([]);
+  });
+
+  it('automatically adds age_ge_50 flag for age >= 50 and removes it when age is corrected to < 50 (Problem 16 fix)', () => {
+    const { setAge } = useEncounterStore.getState();
+
+    // Enter age 55 -> age_ge_50 added
+    setAge(55);
+    expect(useEncounterStore.getState().history.age).toBe(55);
+    expect(useEncounterStore.getState().history.riskFactors).toContain('age_ge_50');
+
+    // Correct typo from 55 to 45 -> age_ge_50 removed!
+    setAge(45);
+    expect(useEncounterStore.getState().history.age).toBe(45);
+    expect(useEncounterStore.getState().history.riskFactors).not.toContain('age_ge_50');
+
+    // Re-enter 60 -> age_ge_50 added
+    setAge(60);
+    expect(useEncounterStore.getState().history.riskFactors).toContain('age_ge_50');
+
+    // Clear age (null) -> age_ge_50 removed
+    setAge(null);
+    expect(useEncounterStore.getState().history.riskFactors).not.toContain('age_ge_50');
   });
 
   it('updates demographics and automatically calculates Cockcroft-Gault CrCl', () => {
@@ -43,7 +77,11 @@ describe('useEncounterStore Zustand store', () => {
   it('enforces single antiviral selection and supports IV-to-oral step-down', () => {
     const { selectAntiviral, switchToOral } = useEncounterStore.getState();
 
-    // Default was valacyclovir
+    // Starts empty
+    expect(useEncounterStore.getState().treatments).toEqual([]);
+
+    // Select valacyclovir
+    selectAntiviral('valacyclovir');
     expect(useEncounterStore.getState().treatments).toEqual([{ drugId: 'valacyclovir' }]);
 
     // Select acyclovir_iv replaces valacyclovir
@@ -72,14 +110,17 @@ describe('useEncounterStore Zustand store', () => {
     expect(useEncounterStore.getState().treatments.some((t) => t.drugId === 'pregabalin')).toBe(false);
   });
 
-  it('resets all state on resetAll', () => {
-    const { toggleLesion, setPainNrs, resetAll } = useEncounterStore.getState();
+  it('resets all state to blank on resetAll', () => {
+    const { toggleLesion, setPainNrs, selectAntiviral, resetAll } = useEncounterStore.getState();
     toggleLesion('V1', 'R');
     setPainNrs(9);
+    selectAntiviral('valacyclovir');
 
     resetAll();
 
     expect(useEncounterStore.getState().lesions).toEqual([]);
     expect(useEncounterStore.getState().history.painNrs).toBeNull();
+    expect(useEncounterStore.getState().history.rashStage).toBeNull();
+    expect(useEncounterStore.getState().treatments).toEqual([]);
   });
 });

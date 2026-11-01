@@ -89,6 +89,7 @@ export const HistorySchema = z.object({
   serumCreatinine: z.number().min(0.1).max(20).nullable(),
   egfr: z.number().min(0).max(200).nullable(),
   crcl: z.number().min(0).max(300).nullable(),
+  isCrclManual: z.boolean(),
   newVesiclesEmerging: z.boolean(),
   ocularSymptoms: z.boolean(),
   hutchinsonSign: z.boolean(),

@@ -17,6 +17,8 @@ export const HistoryPanel: React.FC = () => {
   const setSerumCreatinine = useEncounterStore((s) => s.setSerumCreatinine);
   const setEgfr = useEncounterStore((s) => s.setEgfr);
   const setCrcl = useEncounterStore((s) => s.setCrcl);
+  const resetCrclToAuto = useEncounterStore((s) => s.resetCrclToAuto);
+  const [crclDraft, setCrclDraft] = React.useState<string | null>(null);
   const setNewVesiclesEmerging = useEncounterStore((s) => s.setNewVesiclesEmerging);
   const setOcularSymptoms = useEncounterStore((s) => s.setOcularSymptoms);
   const setHutchinsonSign = useEncounterStore((s) => s.setHutchinsonSign);
@@ -167,7 +169,7 @@ export const HistoryPanel: React.FC = () => {
                 <strong>적용 신기능 지표: </strong>
                 {history.crcl !== null && (
                   <span className={`${styles.renalTag} ${styles.renalTagCrcl}`}>
-                    CrCl: {history.crcl} mL/min (Cockcroft-Gault)
+                    CrCl: {history.crcl} mL/min {history.isCrclManual ? '(수동 입력됨)' : '(Cockcroft-Gault 자동산출)'}
                   </span>
                 )}
                 {history.egfr !== null && (
@@ -183,12 +185,30 @@ export const HistoryPanel: React.FC = () => {
                   placeholder="mL/min"
                   className={styles.textInput}
                   style={{ width: '70px', padding: '2px 6px', fontSize: '11px' }}
-                  value={history.crcl ?? ''}
+                  value={crclDraft ?? history.crcl ?? ''}
                   onChange={(e) => {
-                    const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                    setCrcl(val);
+                    // Keep an empty field as a local draft so the auto-computed value
+                    // does not pop back in mid-edit (typing would append to it).
+                    setCrclDraft(e.target.value);
+                    const val = parseFloat(e.target.value);
+                    if (!Number.isNaN(val)) setCrcl(val);
+                  }}
+                  onBlur={() => {
+                    if (crclDraft === '') setCrcl(null);
+                    setCrclDraft(null);
                   }}
                 />
+                {history.isCrclManual && (
+                  <button
+                    type="button"
+                    onClick={resetCrclToAuto}
+                    className={styles.quickBtn}
+                    style={{ fontSize: '10px', padding: '2px 6px' }}
+                    title="나이/성별/체중/Cr 기반 자동 계산으로 복원"
+                  >
+                    자동 계산 복원
+                  </button>
+                )}
               </div>
             </div>
             <div className={styles.renalHint}>

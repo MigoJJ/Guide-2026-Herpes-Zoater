@@ -16,6 +16,7 @@ describe('redFlags rules engine', () => {
       serumCreatinine: 1.0,
       egfr: 90,
       crcl: 90,
+      isCrclManual: false,
       newVesiclesEmerging: false,
       ocularSymptoms: false,
       hutchinsonSign: false,

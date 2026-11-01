@@ -15,6 +15,30 @@ export function generateNote(
   const { locale = 'ko', referenceDate = new Date() } = options;
   const { history, lesions, treatments } = encounter;
 
+  // Check if encounter is completely empty
+  const hasHistoryData =
+    history.onsetDate !== null ||
+    history.rashStage !== null ||
+    history.painNrs !== null ||
+    history.prodrome.length > 0 ||
+    history.riskFactors.length > 0 ||
+    history.age !== null ||
+    history.sex !== null ||
+    history.weightKg !== null ||
+    history.serumCreatinine !== null ||
+    history.egfr !== null ||
+    history.crcl !== null ||
+    history.newVesiclesEmerging ||
+    history.ocularSymptoms ||
+    history.hutchinsonSign ||
+    history.hearingSymptoms ||
+    history.facialPalsy;
+
+  const hasAnyData = hasHistoryData || lesions.length > 0 || treatments.length > 0;
+  if (!hasAnyData) {
+    return '';
+  }
+
   const sSection = buildSubjective(history, lesions, referenceDate, locale);
   const oSection = buildObjective(history, lesions, locale);
   const aSection = buildAssessment(history, lesions, referenceDate, locale);
@@ -61,7 +85,7 @@ function buildSubjective(
     } catch {
       parts.push(locale === 'ko' ? `발병일: ${history.onsetDate}` : `Onset date: ${history.onsetDate}`);
     }
-  } else {
+  } else if (lesions.length > 0 || history.painNrs !== null || history.prodrome.length > 0) {
     parts.push(locale === 'ko' ? `${demoPrefix}수일 전 발현된 피부 병변 및 통증으로 내원.` : 'Presents with skin rash and pain.');
   }
 
@@ -123,6 +147,7 @@ function buildSubjective(
     parts.push(locale === 'ko' ? `기저질환/위험인자: ${rfs}.` : `Underlying conditions: ${history.riskFactors.join(', ')}.`);
   }
 
+  if (parts.length === 0) return '';
   return `[S]\n${parts.join(' ')}`;
 }
 
@@ -133,7 +158,7 @@ function buildObjective(
 ): string {
   const parts: string[] = [];
 
-  // Stage description
+  // Stage description (only when rashStage is selected by the doctor)
   const stageKoMap: Record<string, string> = {
     erythema: '초기 홍반 및 구진(Erythematous papules)',
     vesicular: '군집성 수포(Clustered vesicles on erythematous base)',
@@ -141,11 +166,9 @@ function buildObjective(
     crusted: '가피 형성기(Crusted lesions)',
   };
 
-  const stageText = history.rashStage ? stageKoMap[history.rashStage] || history.rashStage : '수포성 병변';
+  const stageText = history.rashStage ? stageKoMap[history.rashStage] || history.rashStage : null;
 
-  if (lesions.length === 0) {
-    parts.push(locale === 'ko' ? `피부 소견: 특정 분절 미선택, ${stageText}.` : `Physical exam: ${stageText}.`);
-  } else {
+  if (lesions.length > 0) {
     const lesionDesc = lesions
       .map((l) => {
         const meta = DERMATOMES[l.dermatome];
@@ -159,10 +182,24 @@ function buildObjective(
       ? locale === 'ko' ? '정중선을 침범하여 양측성으로 분포.' : 'Bilateral distribution crossing midline.'
       : locale === 'ko' ? '신경절을 따라 편측성으로 분포하며 정중선(midline)을 넘지 않음.' : 'Unilateral dermatomal distribution, does not cross midline.';
 
+    if (stageText) {
+      parts.push(
+        locale === 'ko'
+          ? `피부 소견: ${lesionDesc} 피부분절을 따라 ${stageText} 관찰됨. ${midlineNote}`
+          : `Physical exam: ${lesionDesc} dermatomal pattern with ${stageText}. ${midlineNote}`
+      );
+    } else {
+      parts.push(
+        locale === 'ko'
+          ? `피부 소견: ${lesionDesc} 피부분절에 병변 관찰됨. ${midlineNote}`
+          : `Physical exam: ${lesionDesc} dermatomal pattern lesions observed. ${midlineNote}`
+      );
+    }
+  } else if (stageText) {
     parts.push(
       locale === 'ko'
-        ? `피부 소견: ${lesionDesc} 피부분절을 따라 ${stageText} 관찰됨. ${midlineNote}`
-        : `Physical exam: ${lesionDesc} dermatomal pattern with ${stageText}. ${midlineNote}`
+        ? `피부 소견: ${stageText} 관찰됨 (피부분절 미선택).`
+        : `Physical exam: ${stageText} observed (dermatome unspecified).`
     );
   }
 
@@ -188,6 +225,7 @@ function buildObjective(
     );
   }
 
+  if (parts.length === 0) return '';
   return `[O]\n${parts.join(' ')}`;
 }
 
@@ -292,7 +330,11 @@ function buildPlan(
       const duration = tx.durationDays || adj.durationDays;
       const prnText = tx.isPrn ? ' (필요시 PRN)' : '';
 
-      const note = adj.isAdjusted ? ` [${adj.renalMetricUsed} 기준 용량 감량됨]` : '';
+      const note = adj.isAdjusted
+        ? ` [${adj.renalMetricUsed} 기준 용량 감량됨]`
+        : adj.renalWarning && tx.drugId === 'nsaid_ibuprofen'
+          ? ' [신기능 주의: 신독성 위험]'
+          : '';
       rxLines.push(`  ${idx + 1}) ${base.nameKo}: ${dose} ${freq}${prnText} × ${duration}일${note}`);
     });
 
@@ -301,7 +343,7 @@ function buildPlan(
       parts.push(...rxLines);
     }
   } else {
-    parts.push(locale === 'ko' ? '1. 처방: 보존적 치료 및 경과 관찰.' : '1. Plan: Conservative management.');
+    parts.push(locale === 'ko' ? '1. 처방 약제: 미선택 (처방 선택 대기 또는 보존적 치료)' : '1. Medications: None selected.');
   }
 
   // 2. Referrals / Red flag interventions
@@ -328,7 +370,24 @@ function buildPlan(
 
   // 3. Clinical Guidelines & Patient Education
   parts.push(locale === 'ko' ? '\n3. 임상 관리 지침 및 복약 지도:' : '\n3. Patient Education:');
-  parts.push('  - 항바이러스제는 임의 중단 없이 처방된 일수(7일 전량)를 규칙적으로 끝까지 복용하도록 설명함.');
+
+  const antiviralTx = treatments.find((t) =>
+    ['valacyclovir', 'famciclovir', 'famvir_kr_250', 'acyclovir_oral', 'acyclovir_iv', 'foscarnet_iv'].includes(
+      t.drugId
+    )
+  );
+  if (antiviralTx) {
+    const base = DRUG_REGIMENS[antiviralTx.drugId];
+    const adj = calculateAdjustedDose(antiviralTx.drugId, {
+      crcl: history.crcl,
+      egfr: history.egfr,
+      weightKg: history.weightKg,
+      age: history.age,
+      ivIndication: antiviralTx.ivIndication,
+    });
+    const antiviralDays = antiviralTx.durationDays || adj.durationDays || base?.standardDurationDays || 7;
+    parts.push(`  - 항바이러스제는 임의 중단 없이 처방된 전 기간(${antiviralDays}일 전량)을 규칙적으로 끝까지 복용하도록 설명함.`);
+  }
 
   if (history.riskFactors.includes('immunocompromised')) {
     parts.push('  - [면역저하자] 모든 병변이 완전히 가피(딱지)화될 때까지 항바이러스제 치료 기간을 연장하여 지속 투여함.');

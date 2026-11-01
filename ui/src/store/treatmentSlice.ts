@@ -19,7 +19,7 @@ export const createTreatmentSlice: StateCreator<
   [],
   TreatmentSlice
 > = (set) => ({
-  treatments: [{ drugId: 'valacyclovir' }], // Default standard choice
+  treatments: [], // Starts blank until selected by doctor
 
   selectAntiviral: (drugId) =>
     set((state) => {
