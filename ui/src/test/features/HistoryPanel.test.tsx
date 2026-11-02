@@ -132,4 +132,39 @@ describe('HistoryPanel component', () => {
     fireEvent.click(hutchinsonChip);
     expect(useEncounterStore.getState().history.hutchinsonSign).toBe(true);
   });
+
+  it('supports lb weight unit toggle with real-time kg conversion and displays calculation formula', () => {
+    render(<HistoryPanel />);
+
+    // Toggle to lb
+    const lbBtn = screen.getByRole('button', { name: 'lb' });
+    fireEvent.click(lbBtn);
+    expect(useEncounterStore.getState().history.weightUnit).toBe('lb');
+
+    // Type 110 lb
+    const weightInput = screen.getByPlaceholderText('예: 110');
+    fireEvent.change(weightInput, { target: { value: '110' } });
+
+    // Should display converted kg
+    expect(screen.getByText(/49\.9\s*kg\s*환산됨/i)).toBeInTheDocument();
+    expect(useEncounterStore.getState().history.weightKg).toBe(49.9);
+
+    // Enter age 75, sex F, sCr 1.0 to see formula
+    fireEvent.change(screen.getByPlaceholderText('예: 75'), { target: { value: '75' } });
+    fireEvent.change(screen.getByRole('combobox'), { target: { value: 'F' } });
+    fireEvent.change(screen.getByPlaceholderText('예: 1.0'), { target: { value: '1.0' } });
+
+    // Formula code must be visible on screen for transparent non-device CDS inspection
+    expect(screen.getByText(/계산 근거 수식:/i)).toBeInTheDocument();
+    expect(screen.getByText(/\[\(140 - 75\) × 49\.9kg\]/i)).toBeInTheDocument();
+  });
+
+  it('displays warning when creatinine lab date is stale (> 30 days)', () => {
+    render(<HistoryPanel />);
+
+    const crDateInput = screen.getByTitle(/30일 초과 시 과거 수치 경고/i);
+    fireEvent.change(crDateInput, { target: { value: '2026-08-01' } });
+
+    expect(screen.getByText(/급성기 신기능 재확인 권장/i)).toBeInTheDocument();
+  });
 });

@@ -1,31 +1,37 @@
 import { describe, expect, it } from 'vitest';
 import { generateNote } from '../../domain/noteGenerator';
-import type { Encounter } from '../../domain/types';
+import type { Encounter, History } from '../../domain/types';
 
 describe('noteGenerator pure function', () => {
   const fixedDate = new Date('2026-10-25T12:00:00Z');
 
+  const baseHistory: History = {
+    onsetDate: null,
+    rashStage: null,
+    painNrs: null,
+    prodrome: [],
+    riskFactors: [],
+    age: null,
+    sex: null,
+    weightKg: null,
+    weightInputValue: null,
+    weightUnit: 'kg',
+    serumCreatinine: null,
+    serumCreatinineDate: null,
+    egfr: null,
+    egfrDate: null,
+    crcl: null,
+    isCrclManual: false,
+    newVesiclesEmerging: false,
+    ocularSymptoms: false,
+    hutchinsonSign: false,
+    hearingSymptoms: false,
+    facialPalsy: false,
+  };
+
   it('returns empty string when encounter is completely blank (Problem 17 fix)', () => {
     const blankEncounter: Encounter = {
-      history: {
-        onsetDate: null,
-        rashStage: null,
-        painNrs: null,
-        prodrome: [],
-        riskFactors: [],
-        age: null,
-        sex: null,
-        weightKg: null,
-        serumCreatinine: null,
-        egfr: null,
-        crcl: null,
-        isCrclManual: false,
-        newVesiclesEmerging: false,
-        ocularSymptoms: false,
-        hutchinsonSign: false,
-        hearingSymptoms: false,
-        facialPalsy: false,
-      },
+      history: { ...baseHistory },
       lesions: [],
       treatments: [],
     };
@@ -37,23 +43,9 @@ describe('noteGenerator pure function', () => {
     // Only dermatome T4 is selected; rashStage and treatments are blank
     const encounter: Encounter = {
       history: {
+        ...baseHistory,
         onsetDate: '2026-10-24',
-        rashStage: null, // NOT selected
         painNrs: 4,
-        prodrome: [],
-        riskFactors: [],
-        age: null,
-        sex: null,
-        weightKg: null,
-        serumCreatinine: null,
-        egfr: null,
-        crcl: null,
-        isCrclManual: false,
-        newVesiclesEmerging: false,
-        ocularSymptoms: false,
-        hutchinsonSign: false,
-        hearingSymptoms: false,
-        facialPalsy: false,
       },
       lesions: [{ dermatome: 'T4', side: 'R' }],
       treatments: [], // NOT selected
@@ -71,6 +63,7 @@ describe('noteGenerator pure function', () => {
   it('generates standard thoracic zoster SOAP note within 72h window and dynamic education (Item 12)', () => {
     const encounter: Encounter = {
       history: {
+        ...baseHistory,
         onsetDate: '2026-10-24',
         rashStage: 'vesicular',
         painNrs: 6,
@@ -82,12 +75,6 @@ describe('noteGenerator pure function', () => {
         serumCreatinine: 0.9,
         egfr: 88,
         crcl: 85,
-        isCrclManual: false,
-        newVesiclesEmerging: false,
-        ocularSymptoms: false,
-        hutchinsonSign: false,
-        hearingSymptoms: false,
-        facialPalsy: false,
       },
       lesions: [{ dermatome: 'T4', side: 'R' }],
       treatments: [
@@ -122,26 +109,49 @@ describe('noteGenerator pure function', () => {
     expect(note).toContain('7일 전량');
   });
 
+  it('generates note with converted lb weight and sCr lab date', () => {
+    const encounter: Encounter = {
+      history: {
+        ...baseHistory,
+        onsetDate: '2026-10-24',
+        rashStage: 'vesicular',
+        painNrs: 5,
+        age: 75,
+        sex: 'F',
+        weightKg: 49.9,
+        weightInputValue: 110,
+        weightUnit: 'lb',
+        serumCreatinine: 1.0,
+        serumCreatinineDate: '2026-10-15',
+        egfr: 56,
+        crcl: 38.3,
+      },
+      lesions: [{ dermatome: 'T4', side: 'R' }],
+      treatments: [{ drugId: 'valacyclovir' }],
+    };
+
+    const note = generateNote(encounter, { locale: 'ko', referenceDate: fixedDate });
+
+    expect(note).toContain('49.9kg (110lb)');
+    expect(note).toContain('sCr: 1 mg/dL [검사일: 2026-10-15]');
+  });
+
   it('generates Herpes Zoster Ophthalmicus (B02.30) note with urgent eye referral', () => {
     const encounter: Encounter = {
       history: {
+        ...baseHistory,
         onsetDate: '2026-10-23',
         rashStage: 'vesicular',
         painNrs: 8,
         prodrome: ['headache', 'fever'],
-        riskFactors: [],
         age: 62,
         sex: 'F',
         weightKg: 55,
         serumCreatinine: 0.8,
         egfr: 95,
         crcl: 68,
-        isCrclManual: false,
-        newVesiclesEmerging: false,
         ocularSymptoms: true,
         hutchinsonSign: true,
-        hearingSymptoms: false,
-        facialPalsy: false,
       },
       lesions: [{ dermatome: 'V1', side: 'L' }],
       treatments: [{ drugId: 'valacyclovir' }],
@@ -157,21 +167,17 @@ describe('noteGenerator pure function', () => {
   it('generates Ramsay Hunt syndrome (B02.21) note with ENT/neuro referral', () => {
     const encounter: Encounter = {
       history: {
+        ...baseHistory,
         onsetDate: '2026-10-24',
         rashStage: 'vesicular',
         painNrs: 7,
         prodrome: ['malaise'],
-        riskFactors: [],
         age: 50,
         sex: 'M',
         weightKg: 75,
         serumCreatinine: 1.0,
         egfr: 80,
         crcl: 85,
-        isCrclManual: false,
-        newVesiclesEmerging: false,
-        ocularSymptoms: false,
-        hutchinsonSign: false,
         hearingSymptoms: true,
         facialPalsy: true,
       },
@@ -189,6 +195,7 @@ describe('noteGenerator pure function', () => {
   it('generates Disseminated Zoster (B02.7) note with admission recommendation and dynamic IV duration', () => {
     const encounter: Encounter = {
       history: {
+        ...baseHistory,
         onsetDate: '2026-10-22',
         rashStage: 'vesicular',
         painNrs: 5,
@@ -200,12 +207,7 @@ describe('noteGenerator pure function', () => {
         serumCreatinine: 1.1,
         egfr: 60,
         crcl: 55,
-        isCrclManual: false,
         newVesiclesEmerging: true,
-        ocularSymptoms: false,
-        hutchinsonSign: false,
-        hearingSymptoms: false,
-        facialPalsy: false,
       },
       lesions: [
         { dermatome: 'T3', side: 'L' },
@@ -228,10 +230,10 @@ describe('noteGenerator pure function', () => {
   it('reflects CrCl Cockcroft-Gault renal dose adjustment in note and avoids false NSAID dose reduction', () => {
     const encounter: Encounter = {
       history: {
+        ...baseHistory,
         onsetDate: '2026-10-24',
         rashStage: 'vesicular',
         painNrs: 5,
-        prodrome: [],
         riskFactors: ['ckd'],
         age: 75,
         sex: 'F',
@@ -239,12 +241,6 @@ describe('noteGenerator pure function', () => {
         serumCreatinine: 1.0,
         egfr: 56,
         crcl: 38.4,
-        isCrclManual: false,
-        newVesiclesEmerging: false,
-        ocularSymptoms: false,
-        hutchinsonSign: false,
-        hearingSymptoms: false,
-        facialPalsy: false,
       },
       lesions: [{ dermatome: 'T10', side: 'R' }],
       treatments: [
@@ -267,6 +263,7 @@ describe('noteGenerator pure function', () => {
   it('includes oral Prednisolone instructions and diabetes warning in note', () => {
     const encounter: Encounter = {
       history: {
+        ...baseHistory,
         onsetDate: '2026-10-24',
         rashStage: 'vesicular',
         painNrs: 8,
@@ -278,12 +275,6 @@ describe('noteGenerator pure function', () => {
         serumCreatinine: 0.9,
         egfr: 90,
         crcl: 90,
-        isCrclManual: false,
-        newVesiclesEmerging: false,
-        ocularSymptoms: false,
-        hutchinsonSign: false,
-        hearingSymptoms: false,
-        facialPalsy: false,
       },
       lesions: [{ dermatome: 'T4', side: 'R' }],
       treatments: [

@@ -5,18 +5,22 @@ import {
   selectHistory,
   selectLesions,
   selectTreatments,
+  selectPatientSessionKey,
 } from '../../store';
 import { generateNote } from '../../domain/noteGenerator';
+import { dispatchNoteToEmr } from '../../shared/emr/emrBridge';
 import type { Encounter } from '../../domain/types';
 
 export const NotePanel: React.FC = () => {
   const history = useEncounterStore(selectHistory);
   const lesions = useEncounterStore(selectLesions);
   const treatments = useEncounterStore(selectTreatments);
+  const patientSessionKey = useEncounterStore(selectPatientSessionKey);
 
   const [locale, setLocale] = useState<'ko' | 'en'>('ko');
   const [draft, setDraft] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
+  const [sentToEmr, setSentToEmr] = useState(false);
 
   const encounter: Encounter = useMemo(
     () => ({ history, lesions, treatments }),
@@ -73,6 +77,12 @@ export const NotePanel: React.FC = () => {
     }
   };
 
+  const handleSendToEmr = () => {
+    dispatchNoteToEmr(currentNote);
+    setSentToEmr(true);
+    setTimeout(() => setSentToEmr(false), 3000);
+  };
+
   return (
     <div className={styles.panelContainer}>
       <div className={styles.panelHeader}>
@@ -100,6 +110,17 @@ export const NotePanel: React.FC = () => {
             ENG
           </button>
 
+          {patientSessionKey && (
+            <button
+              type="button"
+              className={styles.sendEmrButton}
+              onClick={handleSendToEmr}
+              title={`활성 EMR 환자(#${patientSessionKey}) 차트에 직접 전송`}
+            >
+              {sentToEmr ? '✓ EMR 전송완료!' : '🚀 EMR 차트 전송'}
+            </button>
+          )}
+
           <button
             type="button"
             className={styles.copyButton}
@@ -118,6 +139,12 @@ export const NotePanel: React.FC = () => {
           <button type="button" className={styles.resetBtn} onClick={handleResetToAuto}>
             자동 생성으로 초기화
           </button>
+        </div>
+      )}
+
+      {sentToEmr && (
+        <div className={styles.toast}>
+          <span>✓ EMR 연동 세션 (#{patientSessionKey})으로 진료기록이 안전하게 전송되었습니다!</span>
         </div>
       )}
 

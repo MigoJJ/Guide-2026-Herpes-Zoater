@@ -59,7 +59,13 @@ function buildSubjective(
   const demoParts: string[] = [];
   if (history.age !== null) demoParts.push(`${history.age}세`);
   if (history.sex !== null) demoParts.push(history.sex === 'M' ? '남성' : '여성');
-  if (history.weightKg !== null) demoParts.push(`${history.weightKg}kg`);
+  if (history.weightKg !== null) {
+    if (history.weightUnit === 'lb' && history.weightInputValue) {
+      demoParts.push(`${history.weightKg}kg (${history.weightInputValue}lb)`);
+    } else {
+      demoParts.push(`${history.weightKg}kg`);
+    }
+  }
   const demoPrefix = demoParts.length > 0 ? `[환자: ${demoParts.join('/')}] ` : '';
 
   // 1. Onset & Duration
@@ -209,10 +215,12 @@ function buildObjective(
     renalItems.push(`CrCl(Cockcroft-Gault): ${history.crcl} mL/min`);
   }
   if (history.egfr !== null) {
-    renalItems.push(`eGFR: ${history.egfr} mL/min/1.73m²`);
+    const egfrDateStr = history.egfrDate ? ` [검사일: ${history.egfrDate}]` : '';
+    renalItems.push(`eGFR: ${history.egfr} mL/min/1.73m²${egfrDateStr}`);
   }
   if (history.serumCreatinine !== null) {
-    renalItems.push(`sCr: ${history.serumCreatinine} mg/dL`);
+    const crDateStr = history.serumCreatinineDate ? ` [검사일: ${history.serumCreatinineDate}]` : '';
+    renalItems.push(`sCr: ${history.serumCreatinine} mg/dL${crDateStr}`);
   }
 
   if (renalItems.length > 0) {
