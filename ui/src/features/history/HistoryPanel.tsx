@@ -3,6 +3,7 @@ import styles from './HistoryPanel.module.css';
 import { useEncounterStore, selectHistory } from '../../store';
 import { format, subDays } from 'date-fns';
 import type { BiologicalSex, ProdromeSymptom, RashStage, RiskFactor } from '../../domain/types';
+import { getCockcroftGaultFormulaString, getStaleLabWarning } from '../../domain/regimens';
 
 export const HistoryPanel: React.FC = () => {
   const history = useEncounterStore(selectHistory);
@@ -13,9 +14,12 @@ export const HistoryPanel: React.FC = () => {
   const toggleRiskFactor = useEncounterStore((s) => s.toggleRiskFactor);
   const setAge = useEncounterStore((s) => s.setAge);
   const setSex = useEncounterStore((s) => s.setSex);
-  const setWeightKg = useEncounterStore((s) => s.setWeightKg);
+  const setWeight = useEncounterStore((s) => s.setWeight);
+  const setWeightUnit = useEncounterStore((s) => s.setWeightUnit);
   const setSerumCreatinine = useEncounterStore((s) => s.setSerumCreatinine);
+  const setSerumCreatinineDate = useEncounterStore((s) => s.setSerumCreatinineDate);
   const setEgfr = useEncounterStore((s) => s.setEgfr);
+  const setEgfrDate = useEncounterStore((s) => s.setEgfrDate);
   const setCrcl = useEncounterStore((s) => s.setCrcl);
   const resetCrclToAuto = useEncounterStore((s) => s.resetCrclToAuto);
   const [crclDraft, setCrclDraft] = React.useState<string | null>(null);
@@ -108,21 +112,47 @@ export const HistoryPanel: React.FC = () => {
           </div>
 
           <div className={styles.fieldGroup}>
-            <label className={styles.fieldLabel}>체중 (kg)</label>
+            <div style={{ display: 'flex', alignItems: 'center', justifyContent: 'space-between', gap: '4px' }}>
+              <label className={styles.fieldLabel}>체중</label>
+              <div className={styles.unitToggleGroup}>
+                <button
+                  type="button"
+                  className={styles.unitBtn}
+                  data-active={history.weightUnit === 'kg'}
+                  onClick={() => setWeightUnit('kg')}
+                >
+                  kg
+                </button>
+                <button
+                  type="button"
+                  className={styles.unitBtn}
+                  data-active={history.weightUnit === 'lb'}
+                  onClick={() => setWeightUnit('lb')}
+                  title="미국 EMR 파운드(lb) 입력 지원"
+                >
+                  lb
+                </button>
+              </div>
+            </div>
             <input
               type="number"
-              min="20"
-              max="250"
+              min="10"
+              max="660"
               step="0.5"
-              placeholder="예: 50"
+              placeholder={history.weightUnit === 'kg' ? '예: 50' : '예: 110'}
               className={styles.textInput}
-              style={{ width: '70px' }}
-              value={history.weightKg ?? ''}
+              style={{ width: '90px' }}
+              value={history.weightInputValue ?? history.weightKg ?? ''}
               onChange={(e) => {
                 const val = e.target.value === '' ? null : parseFloat(e.target.value);
-                setWeightKg(val);
+                setWeight(val);
               }}
             />
+            {history.weightUnit === 'lb' && history.weightKg !== null && (
+              <span style={{ fontSize: '10px', color: 'var(--text-muted)' }}>
+                ≈ {history.weightKg} kg 환산됨
+              </span>
+            )}
           </div>
 
           <div className={styles.fieldGroup}>
@@ -144,6 +174,18 @@ export const HistoryPanel: React.FC = () => {
           </div>
 
           <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>Cr 검사일자</label>
+            <input
+              type="date"
+              className={styles.textInput}
+              style={{ width: '130px', padding: '5px 8px' }}
+              value={history.serumCreatinineDate ?? ''}
+              onChange={(e) => setSerumCreatinineDate(e.target.value || null)}
+              title="검사 시행 일자 (30일 초과 시 과거 수치 경고)"
+            />
+          </div>
+
+          <div className={styles.fieldGroup}>
             <label className={styles.fieldLabel}>eGFR (검사결과)</label>
             <input
               type="number"
@@ -159,7 +201,27 @@ export const HistoryPanel: React.FC = () => {
               }}
             />
           </div>
+
+          <div className={styles.fieldGroup}>
+            <label className={styles.fieldLabel}>eGFR 검사일</label>
+            <input
+              type="date"
+              className={styles.textInput}
+              style={{ width: '130px', padding: '5px 8px' }}
+              value={history.egfrDate ?? ''}
+              onChange={(e) => setEgfrDate(e.target.value || null)}
+              title="eGFR 검사 시행 일자"
+            />
+          </div>
         </div>
+
+        {/* Stale Lab Date Warning */}
+        {getStaleLabWarning(history.serumCreatinineDate) && (
+          <div className={styles.staleDateWarning} role="alert">
+            <span>⚠️</span>
+            <span>{getStaleLabWarning(history.serumCreatinineDate)}</span>
+          </div>
+        )}
 
         {/* CrCl Cockcroft-Gault Comparison Display Box */}
         {(history.crcl !== null || history.egfr !== null) && (
@@ -211,8 +273,17 @@ export const HistoryPanel: React.FC = () => {
                 )}
               </div>
             </div>
+
+            {/* Non-Device CDS: Exact Calculation Formula Display */}
+            {getCockcroftGaultFormulaString(history.age, history.sex, history.weightKg, history.serumCreatinine) && (
+              <div className={styles.formulaCode}>
+                <strong>계산 근거 수식: </strong>
+                {getCockcroftGaultFormulaString(history.age, history.sex, history.weightKg, history.serumCreatinine)}
+              </div>
+            )}
+
             <div className={styles.renalHint}>
-              💡 <strong>CrCl vs eGFR 주의:</strong> 미국 FDA 허가 기준(발라시클로버, 아시클로버, 가바펜틴)은 Cockcroft-Gault CrCl 기준입니다. 고령·저체중 환자(예: 75세 여, 50kg, Cr 1.0)는 eGFR(56)보다 실제 CrCl(38)이 현저히 낮아 용량 감량이 필요합니다.
+              💡 <strong>CrCl vs eGFR 주의 (FDA 가이드라인):</strong> 미국 FDA 허가 기준(발라시클로버, 아시클로버, 가바펜틴)은 Cockcroft-Gault CrCl 기준입니다. 고령·저체중 환자(예: 75세 여, 50kg, Cr 1.0)는 eGFR(56)보다 실제 CrCl(38)이 현저히 낮아 용량 감량이 필요합니다.
             </div>
           </div>
         )}

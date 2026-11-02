@@ -38,6 +38,8 @@ export type RiskFactor = 'immunocompromised' | 'ckd' | 'age_ge_50' | 'pregnancy'
 
 export type BiologicalSex = 'M' | 'F';
 
+export type WeightUnit = 'kg' | 'lb';
+
 export type IvIndication =
   | 'disseminated_immunocompromised' // 면역저하자 / 파종성: 7-10일 후 경구 전환
   | 'cns_involvement' // 중추신경계 침범(수막뇌염): 10-15 mg/kg × 10-14일
@@ -53,9 +55,13 @@ export interface History {
   // Patient Demographics & Renal Parameters
   age: number | null; // years
   sex: BiologicalSex | null; // 'M' | 'F'
-  weightKg: number | null; // kg
+  weightKg: number | null; // normalized to kg for medical formulas
+  weightInputValue: number | null; // raw value entered by user in selected unit
+  weightUnit: WeightUnit; // 'kg' or 'lb'
   serumCreatinine: number | null; // mg/dL
+  serumCreatinineDate: string | null; // ISO YYYY-MM-DD (검사 시행일자)
   egfr: number | null; // mL/min/1.73m² (CKD-EPI)
+  egfrDate: string | null; // ISO YYYY-MM-DD (검사 시행일자)
   crcl: number | null; // mL/min (Cockcroft-Gault)
   isCrclManual: boolean; // 의사 수동 입력 여부
   newVesiclesEmerging: boolean; // 새 수포가 계속 생성 중인지 여부 (72시간 경과 후 항바이러스제 적응증)

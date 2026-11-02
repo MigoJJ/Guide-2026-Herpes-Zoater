@@ -76,6 +76,26 @@
   background-color: var(--color-success);
 }
 
+.sendEmrButton {
+  padding: 6px 14px;
+  font-size: var(--font-size-sm);
+  font-weight: var(--font-weight-bold);
+  background-color: #059669;
+  color: var(--text-inverse);
+  border: none;
+  border-radius: var(--radius-md);
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  box-shadow: var(--shadow-sm);
+  cursor: pointer;
+  transition: background-color var(--transition-fast);
+}
+
+.sendEmrButton:hover {
+  background-color: #047857;
+}
+
 .dirtyBanner {
   background-color: var(--color-warning-bg);
   border: 1px solid var(--color-warning-border);

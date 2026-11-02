@@ -1,8 +1,10 @@
 # Repository Guidelines
   개발 모드로 실행하여 브라우저에서 바로 확인하실 수 있습니다:
 
-   1 cd /home/migowj/ittia/HerpesZoster/ui
-   2 npm run dev
+```sh
+cd ui
+npm run dev
+```
 
 ## Project Structure & Module Organization
 

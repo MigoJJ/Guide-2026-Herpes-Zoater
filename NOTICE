@@ -1,0 +1,30 @@
+Herpes Zoster Clinical Decision Support (Guide-2026-Herpes-Zoater)
+Copyright 2026 JAE JOON KOH (고재준, GDS Internal Medicine Clinic / 지디스내과)
+
+This product is licensed under the Apache License, Version 2.0 (see LICENSE).
+
+Clinical advice on skin findings (lesion morphology, dermatomal distribution):
+김영걸 (Dermatologist / 피부과 전문의)
+
+본 소프트웨어는 임상 판단을 보조하는 도구이며, 최종 진단·처방·치료 결정과 그 책임은
+면허를 소지한 처방의에게 있습니다. 라이선스 제7조(보증의 부인) 및 제8조(책임의 제한)에 따라
+본 소프트웨어는 어떠한 보증 없이 "있는 그대로(AS IS)" 제공됩니다.
+
+---------------------------------------------------------------------------
+Third-Party Asset Attribution / 제3자 에셋 저작권 고지
+---------------------------------------------------------------------------
+
+The dermatome illustration (ui/src/assets/dermatome_map.webp) is NOT covered
+by the Apache License. It is licensed separately under CC BY-SA 4.0, and any
+reuse or modification of the image itself must follow those terms.
+
+해부학 피부분절 일러스트(ui/src/assets/dermatome_map.webp)는 Apache 라이선스 적용 대상이
+아니며, 아래 CC BY-SA 4.0 조건을 별도로 따릅니다.
+
+- Title:   Dermatomes labeled, female front-back 3d-shaded
+- Author:  Goran_tek-en (https://commons.wikimedia.org/wiki/User:Goran_tek-en)
+- Source:  Wikimedia Commons
+           https://commons.wikimedia.org/wiki/File:Dermatomes_labeled,_female_front-back_3d-shaded.svg
+- License: Creative Commons Attribution-ShareAlike 4.0 International (CC BY-SA 4.0)
+           https://creativecommons.org/licenses/by-sa/4.0/
+- Changes: Rasterized from the original SVG and resized to 618x650 px (WebP).

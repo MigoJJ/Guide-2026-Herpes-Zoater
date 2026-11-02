@@ -10,6 +10,7 @@ import type {
   RegimenSelection,
   RiskFactor,
   Side,
+  WeightUnit,
 } from '../domain/types';
 
 export interface HistorySlice {
@@ -23,8 +24,12 @@ export interface HistorySlice {
   setAge: (age: number | null) => void;
   setSex: (sex: BiologicalSex | null) => void;
   setWeightKg: (weight: number | null) => void;
+  setWeight: (value: number | null, unit?: WeightUnit) => void;
+  setWeightUnit: (unit: WeightUnit) => void;
   setSerumCreatinine: (cr: number | null) => void;
+  setSerumCreatinineDate: (date: string | null) => void;
   setEgfr: (egfr: number | null) => void;
+  setEgfrDate: (date: string | null) => void;
   setCrcl: (crcl: number | null) => void;
   resetCrclToAuto: () => void;
   setNewVesiclesEmerging: (val: boolean) => void;
@@ -56,7 +61,26 @@ export interface TreatmentSlice {
   clearTreatments: () => void;
 }
 
-export interface EncounterStore extends HistorySlice, LesionSlice, TreatmentSlice {
+export interface SessionPatientPayload {
+  age?: number | null;
+  sex?: BiologicalSex | null;
+  weight?: number | null;
+  weightKg?: number | null;
+  weightUnit?: WeightUnit;
+  serumCreatinine?: number | null;
+  serumCreatinineDate?: string | null;
+  egfr?: number | null;
+  egfrDate?: string | null;
+  crcl?: number | null;
+}
+
+export interface SessionSlice {
+  patientSessionKey: string | null;
+  setPatientSession: (sessionKey: string | null, demographics?: SessionPatientPayload) => void;
+  clearPatientSession: () => void;
+}
+
+export interface EncounterStore extends HistorySlice, LesionSlice, TreatmentSlice, SessionSlice {
   resetAll: () => void;
   getEncounter: () => Encounter;
 }

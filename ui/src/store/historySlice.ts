@@ -1,7 +1,7 @@
 import type { StateCreator } from 'zustand';
-import type { History } from '../domain/types';
+import type { History, WeightUnit } from '../domain/types';
 import type { EncounterStore, HistorySlice } from './types';
-import { calculateCockcroftGault } from '../domain/regimens';
+import { calculateCockcroftGault, convertWeightToKg } from '../domain/regimens';
 
 export const initialHistory: History = {
   onsetDate: null,
@@ -12,8 +12,12 @@ export const initialHistory: History = {
   age: null,
   sex: null,
   weightKg: null,
+  weightInputValue: null,
+  weightUnit: 'kg',
   serumCreatinine: null,
+  serumCreatinineDate: null,
   egfr: null,
+  egfrDate: null,
   crcl: null,
   isCrclManual: false,
   newVesiclesEmerging: false,
@@ -109,6 +113,24 @@ export const createHistorySlice: StateCreator<
   setWeightKg: (weight) =>
     set((state) => {
       state.history.weightKg = weight;
+      state.history.weightInputValue = weight;
+      state.history.weightUnit = 'kg';
+      updateCrclIfAuto(state.history);
+    }),
+
+  setWeight: (value, unit?: WeightUnit) =>
+    set((state) => {
+      const activeUnit = unit ?? state.history.weightUnit;
+      state.history.weightUnit = activeUnit;
+      state.history.weightInputValue = value;
+      state.history.weightKg = convertWeightToKg(value, activeUnit);
+      updateCrclIfAuto(state.history);
+    }),
+
+  setWeightUnit: (unit) =>
+    set((state) => {
+      state.history.weightUnit = unit;
+      state.history.weightKg = convertWeightToKg(state.history.weightInputValue, unit);
       updateCrclIfAuto(state.history);
     }),
 
@@ -118,9 +140,19 @@ export const createHistorySlice: StateCreator<
       updateCrclIfAuto(state.history);
     }),
 
+  setSerumCreatinineDate: (date) =>
+    set((state) => {
+      state.history.serumCreatinineDate = date;
+    }),
+
   setEgfr: (egfr) =>
     set((state) => {
       state.history.egfr = egfr;
+    }),
+
+  setEgfrDate: (date) =>
+    set((state) => {
+      state.history.egfrDate = date;
     }),
 
   setCrcl: (crcl) =>

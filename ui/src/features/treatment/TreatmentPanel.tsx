@@ -83,6 +83,12 @@ export const TreatmentPanel: React.FC = () => {
           {adj.renalWarning && (
             <div className={styles.renalWarningText}>⚠️ {adj.renalWarning}</div>
           )}
+          {adj.appliedTier && (
+            <div className={styles.evidenceBadge}>
+              <strong>적용 근거:</strong> {adj.appliedTier}
+              {adj.guidelineSource ? ` [${adj.guidelineSource}]` : ''}
+            </div>
+          )}
         </div>
 
         {isSelected && (
@@ -170,6 +176,11 @@ export const TreatmentPanel: React.FC = () => {
           </button>
         )}
       </h2>
+
+      {/* Non-Device CDS Regulatory & Independence Banner */}
+      <div className={styles.transparencyBanner}>
+        💡 <strong>근거를 보여주는 CDS:</strong> 환자 정보를 저장·전송하지 않도록 설계되었습니다. 처방 알고리즘과 감량 기준은 제약사 후원 없이 고재준(내과 전문의)의 검토 하에 성분명(Generic) 및 공인 가이드라인(FDA/CDC/IDSA)을 기반으로 투명하게 공개됩니다.
+      </div>
 
       {/* Safety Alert Banner */}
       {hasTramadol && hasGabapentinoid && (

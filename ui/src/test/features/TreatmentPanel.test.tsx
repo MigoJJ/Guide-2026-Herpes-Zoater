@@ -22,7 +22,7 @@ describe('TreatmentPanel component', () => {
 
   it('enforces single antiviral selection (radio behavior)', () => {
     render(<TreatmentPanel />);
-    const famvirRadio = screen.getByLabelText(/팜비어 250mg/i);
+    const famvirRadio = screen.getByLabelText(/팜시클로버 250mg|팜비어 250mg/i);
 
     fireEvent.click(famvirRadio);
     expect(
@@ -35,7 +35,7 @@ describe('TreatmentPanel component', () => {
 
   it('shows IV-to-oral step-down button when IV antiviral is selected', () => {
     render(<TreatmentPanel />);
-    const acyclovirIvRadio = screen.getByLabelText(/아시클로버 정맥주사/i);
+    const acyclovirIvRadio = screen.getByLabelText(/아시클로버 주사|아시클로버 정맥주사/i);
 
     fireEvent.click(acyclovirIvRadio);
     expect(screen.getByRole('button', { name: /IV → 경구 전환/i })).toBeInTheDocument();
