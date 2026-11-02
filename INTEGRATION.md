@@ -68,6 +68,18 @@
 
 모든 통신은 HTML5 표준 `window.postMessage` API를 통해 이루어집니다.
 
+### 보안 설정 (필수)
+위젯은 **설정된 EMR 주소(origin)와만** 통신합니다. 빌드 시 환경변수로 지정하십시오 (`ui/.env.example` 참고).
+
+```sh
+# 여러 개는 쉼표로 구분. '*'(모든 주소)는 거부됩니다.
+VITE_EMR_ALLOWED_ORIGINS=https://emr.hospital.local
+```
+
+* 설정이 비어 있으면 EMR 연동은 **꺼진 상태**이며, 클립보드 복사만 사용할 수 있습니다.
+* 다른 주소에서 온 메시지는 무시되고, 위젯의 모든 응답(환자 정보가 담긴 노트 포함)은 해당 EMR 주소로만 전송됩니다.
+* EMR 쪽도 `postMessage`의 두 번째 인자에 `'*'` 대신 **위젯 주소**를 지정하고, 수신 시 `event.origin`을 확인해야 합니다.
+
 ### 3-1. EMR → 위젯: 환자 정보 로드 (`HZ_SET_PATIENT`)
 환자 선택 또는 환자 전환 시 EMR이 위젯으로 발송합니다.
 
@@ -140,6 +152,26 @@
 
 ---
 
+### 3-5. EMR → 위젯: 노트 요청 (`HZ_REQUEST_NOTE`) / 위젯 → EMR: 노트 응답 (`HZ_NOTE_RESPONSE`)
+EMR이 현재 노트를 가져갈 때 사용합니다. **`patientSessionKey`는 필수**이며, 위젯의 현재 환자와 다르거나 빠져 있으면 노트 대신 `HZ_SESSION_MISMATCH_ERROR`를 보냅니다.
+
+```json
+{ "type": "HZ_REQUEST_NOTE", "patientSessionKey": "sess_20261102_987654" }
+```
+
+응답의 `soapNote`는 화면에 보이는 노트 그대로입니다(의사가 직접 수정한 내용 포함).
+
+```json
+{
+  "type": "HZ_NOTE_RESPONSE",
+  "patientSessionKey": "sess_20261102_987654",
+  "timestamp": "2026-11-02T10:18:45.000Z",
+  "soapNote": "[S]\n..."
+}
+```
+
+---
+
 ## 4. EMR 개발팀을 위한 5분 연동 샘플 코드 (React / TS)
 
 호스트 EMR 개발팀에서는 다음 간단한 코드로 즉시 위젯을 띄우고 연동할 수 있습니다:
@@ -158,6 +190,8 @@ interface EmrHerpesZosterWidgetProps {
   } | null;
   onSaveToChart: (soapNote: string) => void;
 }
+
+const WIDGET_ORIGIN = 'https://[YOUR_HOSTED_URL]'; // 위젯 배포 주소 (끝에 / 없이)
 
 export const EmrHerpesZosterWidget: React.FC<EmrHerpesZosterWidgetProps> = ({
   activePatient,
@@ -182,17 +216,18 @@ export const EmrHerpesZosterWidget: React.FC<EmrHerpesZosterWidgetProps> = ({
             egfr: activePatient.egfr,
           },
         },
-        '*'
+        WIDGET_ORIGIN
       );
     } else {
       // 차트가 닫힌 경우 위젯 데이터 완전 초기화
-      iframeRef.current.contentWindow.postMessage({ type: 'HZ_CLEAR_PATIENT' }, '*');
+      iframeRef.current.contentWindow.postMessage({ type: 'HZ_CLEAR_PATIENT' }, WIDGET_ORIGIN);
     }
   }, [activePatient]);
 
   // 2. 위젯으로부터 완성된 SOAP 차트 수신
   useEffect(() => {
     const handleMessage = (event: MessageEvent) => {
+      if (event.origin !== WIDGET_ORIGIN) return; // 위젯 외 출처 무시
       if (event.data?.type === 'HZ_SAVE_NOTE') {
         // [임상 안전 검증] 현재 차트의 환자 세션 키와 일치할 때만 저장!
         if (event.data.patientSessionKey === activePatient?.chartSessionId) {
@@ -211,7 +246,7 @@ export const EmrHerpesZosterWidget: React.FC<EmrHerpesZosterWidgetProps> = ({
   return (
     <iframe
       ref={iframeRef}
-      src="https://[YOUR_HOSTED_URL]/"
+      src={`${WIDGET_ORIGIN}/`}
       style={{ width: '100%', height: '800px', border: 'none' }}
       title="대상포진 EMR 보조 솔루션"
     />

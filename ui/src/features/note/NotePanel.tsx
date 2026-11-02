@@ -1,4 +1,4 @@
-import React, { useState, useMemo } from 'react';
+import React, { useState, useMemo, useEffect, useRef } from 'react';
 import styles from './NotePanel.module.css';
 import {
   useEncounterStore,
@@ -8,7 +8,7 @@ import {
   selectPatientSessionKey,
 } from '../../store';
 import { generateNote } from '../../domain/noteGenerator';
-import { dispatchNoteToEmr } from '../../shared/emr/emrBridge';
+import { dispatchNoteToEmr, registerNoteProvider } from '../../shared/emr/emrBridge';
 import type { Encounter } from '../../domain/types';
 
 export const NotePanel: React.FC = () => {
@@ -21,6 +21,7 @@ export const NotePanel: React.FC = () => {
   const [draft, setDraft] = useState<string | null>(null);
   const [copied, setCopied] = useState(false);
   const [sentToEmr, setSentToEmr] = useState(false);
+  const [emrSendFailed, setEmrSendFailed] = useState(false);
 
   const encounter: Encounter = useMemo(
     () => ({ history, lesions, treatments }),
@@ -35,6 +36,13 @@ export const NotePanel: React.FC = () => {
   // Is dirty flag: doctor manually modified text
   const isDirty = draft !== null && draft !== generatedNote;
   const currentNote = draft ?? generatedNote;
+
+  // Let the EMR bridge answer HZ_REQUEST_NOTE with the note as displayed (including manual edits)
+  const currentNoteRef = useRef(currentNote);
+  useEffect(() => {
+    currentNoteRef.current = currentNote;
+  }, [currentNote]);
+  useEffect(() => registerNoteProvider(() => currentNoteRef.current), []);
 
   const handleTextChange = (e: React.ChangeEvent<HTMLTextAreaElement>) => {
     setDraft(e.target.value);
@@ -78,9 +86,13 @@ export const NotePanel: React.FC = () => {
   };
 
   const handleSendToEmr = () => {
-    dispatchNoteToEmr(currentNote);
-    setSentToEmr(true);
-    setTimeout(() => setSentToEmr(false), 3000);
+    if (dispatchNoteToEmr(currentNote)) {
+      setSentToEmr(true);
+      setTimeout(() => setSentToEmr(false), 3000);
+    } else {
+      setEmrSendFailed(true);
+      setTimeout(() => setEmrSendFailed(false), 5000);
+    }
   };
 
   return (
@@ -145,6 +157,12 @@ export const NotePanel: React.FC = () => {
       {sentToEmr && (
         <div className={styles.toast}>
           <span>✓ EMR 연동 세션 (#{patientSessionKey})으로 진료기록이 안전하게 전송되었습니다!</span>
+        </div>
+      )}
+
+      {emrSendFailed && (
+        <div className={styles.toast} role="alert">
+          <span>⚠️ EMR 연결이 확인되지 않아 전송하지 않았습니다. 복사 후 차트에 붙여넣으세요.</span>
         </div>
       )}
 
