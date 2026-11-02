@@ -37,7 +37,7 @@ describe('DashboardLayout integration', () => {
   it('toggles non-device CDS regulatory positioning and editorial independence banner', () => {
     render(<DashboardLayout />);
 
-    const infoBtn = screen.getByRole('button', { name: /비의료기기 CDS 및 근거 안내/i });
+    const infoBtn = screen.getByRole('button', { name: /CDS 근거 및 규제 안내/i });
     expect(infoBtn).toBeInTheDocument();
 
     // Click to open disclosure banner

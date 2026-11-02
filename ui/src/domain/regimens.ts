@@ -2,16 +2,17 @@ import { differenceInDays, parseISO } from 'date-fns';
 import type { DrugRegimen, IvIndication } from './types';
 
 export const REGIMEN_METADATA = {
-  reviewedBy: 'JAE JOON KOH, MD (GDS Internal Medicine Clinic) & Clinical Advisory Board',
+  reviewedBy: 'JAE JOON KOH, MD (고재준, 내과 전문의, 지디스내과)',
+  clinicalAdvisor: '김영걸 (피부과 전문의) — 피부 소견(병변 형태·피부분절 분포) 자문',
   reviewedAt: '2026-11-02',
   regulatoryPosition:
-    '본 소프트웨어는 미국 21st Century Cures Act § 3060(FDA Non-Device Clinical Decision Support Guidance) 및 대한민국 식품의약품안전처 의료기기 품목 및 임상 소프트웨어 기준에 따른 "비의료기기(Non-Device CDS) 임상 의사결정 지원 및 문서작성 보조" 시스템입니다.',
+    '본 소프트웨어는 미국 21st Century Cures Act § 3060(FDA Non-Device CDS Guidance) 기준을 참고하여 비의료기기 임상결정지원 및 문서작성 보조 도구를 지향하도록 설계되었습니다. 식약처·FDA의 확인을 받은 것은 아닙니다.',
   editorialIndependence:
-    '본 시스템의 모든 권고 내용, 컷오프 구간, 감량 알고리즘 및 안전성 알림 로직은 원장(독립 의학 자문단)의 임상적 판단에 따라 독자적으로 결정되며, 외부 제약사 및 후원사는 어떠한 권고 내용에도 관여하지 않습니다.',
+    '본 시스템의 모든 권고 내용, 컷오프 구간, 감량 알고리즘 및 안전성 알림 로직은 고재준(내과 전문의)의 임상적 판단으로 결정되며, 피부 소견 관련 내용은 김영걸(피부과 전문의)의 자문을 받았습니다. 처방 로직은 자문 범위에 포함되지 않습니다. 또한 외부 제약사 및 후원사는 어떠한 권고 내용에도 관여하지 않습니다.',
   genericPrescribingPolicy:
     '모든 의약품 권고는 특정 상표명이 아닌 공인 성분명(Generic name) 및 공식 가이드라인 표준을 우선으로 표기합니다.',
   sponsorshipDisclosure:
-    '현재 본 시스템은 어떠한 상업적 후원도 받지 않고 독립적으로 운영되고 있으며, 향후 학술 지원 발생 시 화면에 스폰서십 내역을 100% 투명하게 공시합니다.',
+    '현재 본 시스템은 어떠한 상업적 후원도 받지 않고 독립적으로 운영되고 있으며, 향후 학술 지원이 생기면 화면에 스폰서십 내역을 공시합니다.',
   sources: [
     'CDC/ACIP Guidelines for Prevention and Management of Herpes Zoster',
     'IDSA Clinical Practice Guidelines for Management of Herpes Zoster',
@@ -24,7 +25,7 @@ export const REGIMEN_METADATA = {
     'Cochrane Systematic Review (2023): Corticosteroids for preventing postherpetic neuralgia',
   ],
   disclaimer:
-    '본 시스템은 독립적인 임상 판단을 보조하는 비의료기기 CDS 도구입니다. 최종 처방 및 치료 결정의 책임은 면허를 소지한 처방의에게 있습니다.',
+    '본 시스템은 의사의 독립적인 임상 판단을 보조하는 도구입니다. 최종 처방 및 치료 결정의 책임은 면허를 소지한 처방의에게 있습니다.',
 };
 
 /**

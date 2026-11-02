@@ -48,9 +48,9 @@ export const DashboardLayout: React.FC = () => {
             type="button"
             className={styles.infoButton}
             onClick={() => setShowCdsInfo(!showCdsInfo)}
-            title="비의료기기 CDS 및 임상 근거 공개 안내"
+            title="CDS 근거 공개 및 규제 안내"
           >
-            {showCdsInfo ? '✕ 근거 안내 닫기' : 'ℹ️ 비의료기기 CDS 및 근거 안내'}
+            {showCdsInfo ? '✕ 근거 안내 닫기' : 'ℹ️ CDS 근거 및 규제 안내'}
           </button>
 
           {/* Real-time Patient Session Indicator */}
@@ -78,15 +78,15 @@ export const DashboardLayout: React.FC = () => {
 
       {/* Non-Device CDS Regulatory Positioning & Editorial Independence Banner */}
       {showCdsInfo && (
-        <div className={styles.cdsInfoBanner} role="region" aria-label="비의료기기 CDS 및 규제 공시">
+        <div className={styles.cdsInfoBanner} role="region" aria-label="CDS 근거 및 규제 안내">
           <div>
-            🔒 <strong>개인정보 보호 제1원칙:</strong> 본 시스템은 <u>"최소 정보를 브라우저 안에서만 쓰고 아무것도 가져가지 않습니다."</u> 환자 인적사항과 진료 데이터는 브라우저 메모리 안에서만 즉시 연산되며, 외부 서버나 클라우드로 일절 전송되거나 보관되지 않습니다 (Zero-Storage / Zero-Egress).
+            🔒 <strong>개인정보 보호 원칙:</strong> 환자 인적사항과 진료 데이터는 브라우저 메모리 안에서만 연산하며, 외부 서버나 브라우저 저장소에 저장·전송하지 않도록 설계되었습니다(EMR 연동 시에는 설정된 EMR로만 노트를 전달).
           </div>
           <div>
-            💡 <strong>근거를 보여주는 CDS (Evidence-Revealing CDS):</strong> 단순한 작성보조가 아닌, <u>의사가 독립적으로 권고를 검증할 수 있도록 계산 공식(Cockcroft-Gault), 환자별 신기능 컷오프 구간, 글로벌 가이드라인 출처를 화면에 투명하게 공개</u>하는 FDA 21st Century Cures Act § 3060 및 식약처 기준 비의료기기 CDS 시스템입니다. 진료 및 최종 처방 책임은 독립된 면허 의사에게 있습니다.
+            💡 <strong>근거를 보여주는 CDS (Evidence-Revealing CDS):</strong> 단순한 작성보조가 아닌, <u>의사가 독립적으로 권고를 검증할 수 있도록 계산 공식(Cockcroft-Gault), 환자별 신기능 컷오프 구간, 글로벌 가이드라인 출처를 화면에 투명하게 공개</u>합니다. FDA 21st Century Cures Act § 3060 기준을 참고해 비의료기기 CDS를 지향하도록 설계했으며, 식약처·FDA의 확인은 아직 받지 않았습니다. 진료 및 최종 처방 책임은 독립된 면허 의사에게 있습니다.
           </div>
           <div>
-            🛡️ <strong>독립성 및 이해상충(COI) 방지:</strong> 모든 임상 권고와 감량 알고리즘은 독립 의료진(지디스내과 고재준 원장 자문)의 의학적 판단으로만 결정되며, 제약사 및 후원사는 권고 내용에 관여하지 않습니다. 성분명(Generic) 원칙을 준수하며 현재 상업적 후원 없이 독립 운영됩니다.
+            🛡️ <strong>독립성 및 이해상충(COI) 방지:</strong> 모든 임상 권고와 감량 알고리즘은 고재준(내과 전문의, 지디스내과)의 의학적 판단으로 결정되며, 피부 소견은 김영걸(피부과 전문의)의 자문을 받았습니다. 제약사 및 후원사는 권고 내용에 관여하지 않습니다. 성분명(Generic) 원칙을 준수하며 현재 상업적 후원 없이 독립 운영됩니다.
           </div>
         </div>
       )}

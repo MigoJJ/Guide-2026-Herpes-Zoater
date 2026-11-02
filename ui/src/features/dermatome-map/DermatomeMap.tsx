@@ -191,7 +191,7 @@ export const DermatomeMap: React.FC = () => {
 
           {/* Clinical Illustration Credit (CC BY-SA 4.0) */}
           <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'center' }}>
-            Medical Illustration: Goran_tek-en (via WebPathology, CC BY-SA 4.0)
+            Medical Illustration: Goran_tek-en (Wikimedia Commons, CC BY-SA 4.0)
           </div>
         </div>
 

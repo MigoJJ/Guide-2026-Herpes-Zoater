@@ -179,7 +179,7 @@ export const TreatmentPanel: React.FC = () => {
 
       {/* Non-Device CDS Regulatory & Independence Banner */}
       <div className={styles.transparencyBanner}>
-        💡 <strong>근거를 보여주는 CDS:</strong> 최소 정보를 브라우저 안에서만 연산하며 아무것도 외부로 가져가지 않습니다. 모든 처방 알고리즘과 감량 기준은 특정 제약사 후원 없이 독립 의료진의 검토 하에 성분명(Generic) 및 공인 가이드라인(FDA/CDC/IDSA)을 기반으로 투명하게 공개됩니다.
+        💡 <strong>근거를 보여주는 CDS:</strong> 환자 정보를 저장·전송하지 않도록 설계되었습니다. 처방 알고리즘과 감량 기준은 제약사 후원 없이 고재준(내과 전문의)의 검토 하에 성분명(Generic) 및 공인 가이드라인(FDA/CDC/IDSA)을 기반으로 투명하게 공개됩니다.
       </div>
 
       {/* Safety Alert Banner */}

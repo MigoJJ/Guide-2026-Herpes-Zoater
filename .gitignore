@@ -29,3 +29,6 @@ yarn-error.log*
 .env.local
 .env.*.local
 *.tsbuildinfo
+
+# Generated license reports (contain local filesystem paths)
+licenses.json
