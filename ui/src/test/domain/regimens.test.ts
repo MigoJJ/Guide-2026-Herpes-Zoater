@@ -1,5 +1,11 @@
 import { describe, expect, it } from 'vitest';
-import { calculateAdjustedDose, calculateCockcroftGault } from '../../domain/regimens';
+import {
+  calculateAdjustedDose,
+  calculateCockcroftGault,
+  convertWeightToKg,
+  getCockcroftGaultFormulaString,
+  getStaleLabWarning,
+} from '../../domain/regimens';
 
 describe('regimens domain & renal adjustment', () => {
   it('calculates Cockcroft-Gault CrCl accurately', () => {
@@ -164,5 +170,50 @@ describe('regimens domain & renal adjustment', () => {
     // Dose is NOT adjusted (reduced); it is cautioned/avoided!
     expect(nsaidCkd.isAdjusted).toBe(false);
     expect(nsaidCkd.renalWarning).toContain('신독성');
+  });
+
+  it('provides oral Prednisolone tapering regimen and clinical warnings', () => {
+    const pred = calculateAdjustedDose('steroid_prednisolone', null);
+    expect(pred.dose).toContain('50 mg');
+    expect(pred.frequency).toContain('감량');
+    expect(pred.durationDays).toBe(14);
+    expect(pred.renalWarning).toContain('항바이러스제와 병용');
+  });
+
+  it('converts weight between lb and kg with accuracy', () => {
+    // 110 lb ≈ 49.9 kg
+    expect(convertWeightToKg(110, 'lb')).toBe(49.9);
+    // 150 lb ≈ 68.0 kg
+    expect(convertWeightToKg(150, 'lb')).toBe(68.0);
+    // 70 kg in kg is unchanged
+    expect(convertWeightToKg(70, 'kg')).toBe(70.0);
+    expect(convertWeightToKg(null, 'lb')).toBeNull();
+  });
+
+  it('formats Cockcroft-Gault formula substitution for transparent non-device CDS inspection', () => {
+    const formula = getCockcroftGaultFormulaString(75, 'F', 50, 1.0);
+    expect(formula).toContain('[(140 - 75) × 50kg]');
+    expect(formula).toContain('[72 × 1mg/dL]');
+    expect(formula).toContain('0.85 (여성 보정)');
+    expect(formula).toContain('38.4 mL/min');
+  });
+
+  it('warns when creatinine lab date is stale (> 30 days)', () => {
+    const refDate = new Date('2026-11-02');
+    const staleDate = '2026-09-01'; // ~62 days ago
+    const warning = getStaleLabWarning(staleDate, refDate);
+    expect(warning).toContain('62일 전');
+    expect(warning).toContain('약 2개월 전 수치');
+    expect(warning).toContain('급성기 신기능 재확인 권장');
+
+    // Fresh lab (< 30 days) returns null
+    const freshDate = '2026-10-25'; // 8 days ago
+    expect(getStaleLabWarning(freshDate, refDate)).toBeNull();
+  });
+
+  it('populates non-device CDS evidence basis and guideline sources', () => {
+    const valAdj = calculateAdjustedDose('valacyclovir', { crcl: 38, egfr: 56 });
+    expect(valAdj.appliedTier).toContain('CrCl 30–49 mL/min: 감량 1000 mg BID');
+    expect(valAdj.guidelineSource).toContain('FDA Valtrex Label');
   });
 });

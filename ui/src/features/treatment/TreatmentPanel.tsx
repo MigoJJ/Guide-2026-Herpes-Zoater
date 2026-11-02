@@ -83,6 +83,12 @@ export const TreatmentPanel: React.FC = () => {
           {adj.renalWarning && (
             <div className={styles.renalWarningText}>⚠️ {adj.renalWarning}</div>
           )}
+          {adj.appliedTier && (
+            <div className={styles.evidenceBadge}>
+              <strong>적용 근거:</strong> {adj.appliedTier}
+              {adj.guidelineSource ? ` [${adj.guidelineSource}]` : ''}
+            </div>
+          )}
         </div>
 
         {isSelected && (
@@ -171,6 +177,11 @@ export const TreatmentPanel: React.FC = () => {
         )}
       </h2>
 
+      {/* Non-Device CDS Regulatory & Independence Banner */}
+      <div className={styles.transparencyBanner}>
+        💡 <strong>근거를 보여주는 CDS:</strong> 환자 정보를 저장·전송하지 않도록 설계되었습니다. 처방 알고리즘과 감량 기준은 제약사 후원 없이 고재준(내과 전문의)의 검토 하에 성분명(Generic) 및 공인 가이드라인(FDA/CDC/IDSA)을 기반으로 투명하게 공개됩니다.
+      </div>
+
       {/* Safety Alert Banner */}
       {hasTramadol && hasGabapentinoid && (
         <div className={styles.safetyAlertBanner} role="alert">
@@ -236,10 +247,25 @@ export const TreatmentPanel: React.FC = () => {
         </div>
       </div>
 
-      {/* 4. Topicals */}
+      {/* 4. Glucocorticoids (Steroids - Limited Indications) */}
       <div className={styles.categoryGroup}>
         <div className={styles.categoryHeader}>
-          <span>4. 국소 외용제 (Topical Agents)</span>
+          <span>4. 전신 스테로이드 (Oral Glucocorticoid - 일상적 사용 비권장, 제한적 고려)</span>
+        </div>
+        <div style={{ fontSize: '11px', color: 'var(--text-secondary)', padding: '2px 4px', lineHeight: 1.4 }}>
+          ℹ️ <strong>임상 적응증:</strong> Ramsay Hunt 증후군(안면마비) 또는 면역정상 성인의 심한 급성 신경염 통증에 한해 <strong>항바이러스제와 반드시 병용</strong>하여 1~2주 단기 감량 요법(Prednisolone 50mg/d → 감량) 고려.
+          <br />
+          🚨 <strong>금기/비권장:</strong> 면역저하자, 파종성 대상포진, 항바이러스제 없는 단독 투여 절대 금기. <strong>PHN(대상포진후신경통) 예방 효과는 입증되지 않음</strong> (Cochrane 2023, UpToDate Grade 2C). 국소 스테로이드 연고 병변 도포 금기.
+        </div>
+        <div className={styles.cardsList}>
+          {['steroid_prednisolone'].map((id) => renderDrugCard(id))}
+        </div>
+      </div>
+
+      {/* 5. Topicals */}
+      <div className={styles.categoryGroup}>
+        <div className={styles.categoryHeader}>
+          <span>5. 국소 외용제 (Topical Agents)</span>
         </div>
         <div className={styles.cardsList}>
           {['calamine_lotion', 'lidocaine_patch'].map((id) => renderDrugCard(id))}

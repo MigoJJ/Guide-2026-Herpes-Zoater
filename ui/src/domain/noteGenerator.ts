@@ -59,7 +59,13 @@ function buildSubjective(
   const demoParts: string[] = [];
   if (history.age !== null) demoParts.push(`${history.age}세`);
   if (history.sex !== null) demoParts.push(history.sex === 'M' ? '남성' : '여성');
-  if (history.weightKg !== null) demoParts.push(`${history.weightKg}kg`);
+  if (history.weightKg !== null) {
+    if (history.weightUnit === 'lb' && history.weightInputValue) {
+      demoParts.push(`${history.weightKg}kg (${history.weightInputValue}lb)`);
+    } else {
+      demoParts.push(`${history.weightKg}kg`);
+    }
+  }
   const demoPrefix = demoParts.length > 0 ? `[환자: ${demoParts.join('/')}] ` : '';
 
   // 1. Onset & Duration
@@ -209,10 +215,12 @@ function buildObjective(
     renalItems.push(`CrCl(Cockcroft-Gault): ${history.crcl} mL/min`);
   }
   if (history.egfr !== null) {
-    renalItems.push(`eGFR: ${history.egfr} mL/min/1.73m²`);
+    const egfrDateStr = history.egfrDate ? ` [검사일: ${history.egfrDate}]` : '';
+    renalItems.push(`eGFR: ${history.egfr} mL/min/1.73m²${egfrDateStr}`);
   }
   if (history.serumCreatinine !== null) {
-    renalItems.push(`sCr: ${history.serumCreatinine} mg/dL`);
+    const crDateStr = history.serumCreatinineDate ? ` [검사일: ${history.serumCreatinineDate}]` : '';
+    renalItems.push(`sCr: ${history.serumCreatinine} mg/dL${crDateStr}`);
   }
 
   if (renalItems.length > 0) {
@@ -391,6 +399,16 @@ function buildPlan(
 
   if (history.riskFactors.includes('immunocompromised')) {
     parts.push('  - [면역저하자] 모든 병변이 완전히 가피(딱지)화될 때까지 항바이러스제 치료 기간을 연장하여 지속 투여함.');
+  }
+
+  const hasSteroid = treatments.some((t) => t.drugId === 'steroid_prednisolone');
+  if (hasSteroid) {
+    parts.push(
+      '  - [전신 스테로이드] 급성기 신경염 통증 완화 및 안면신경 회복을 위한 1~2주 단기 요법이며, 대상포진후신경통(PHN) 예방 효과는 없음을 설명함. 임의 중단 금지 및 테이퍼링 감량 일정 안내.'
+    );
+    if (history.riskFactors.includes('diabetes')) {
+      parts.push('  - [당뇨 환자] 스테로이드 복용 중 급격한 혈당 상승 위험이 있으므로 자가 혈당 측정을 매일 시행하도록 지도함.');
+    }
   }
 
   const hasGabapentinoid = treatments.some((t) => ['pregabalin', 'gabapentin'].includes(t.drugId));

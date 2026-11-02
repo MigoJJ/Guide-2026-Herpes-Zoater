@@ -13,8 +13,12 @@ describe('redFlags rules engine', () => {
       age: 45,
       sex: 'M',
       weightKg: 70,
+      weightInputValue: 70,
+      weightUnit: 'kg',
       serumCreatinine: 1.0,
+      serumCreatinineDate: null,
       egfr: 90,
+      egfrDate: null,
       crcl: 90,
       isCrclManual: false,
       newVesiclesEmerging: false,
@@ -118,5 +122,55 @@ describe('redFlags rules engine', () => {
     const renal = alerts.find((a) => a.id === 'warning-renal-adjustment');
     expect(renal).toBeDefined();
     expect(renal?.title).toContain('CrCl');
+  });
+
+  it('triggers critical alert when steroid is prescribed without antiviral', () => {
+    const encounter: Encounter = {
+      ...baseEncounter,
+      treatments: [{ drugId: 'steroid_prednisolone' }], // NO antiviral
+    };
+    const alerts = evaluateRedFlags(encounter);
+    const solitary = alerts.find((a) => a.id === 'redflag-steroid-solitary');
+    expect(solitary).toBeDefined();
+    expect(solitary?.severity).toBe('critical');
+    expect(solitary?.message).toContain('바이러스 증식');
+  });
+
+  it('triggers critical alert when steroid is prescribed to immunocompromised or disseminated patient', () => {
+    const encounter: Encounter = {
+      ...baseEncounter,
+      history: {
+        ...baseEncounter.history,
+        riskFactors: ['immunocompromised'],
+      },
+      treatments: [
+        { drugId: 'valacyclovir' },
+        { drugId: 'steroid_prednisolone' },
+      ],
+    };
+    const alerts = evaluateRedFlags(encounter);
+    const contra = alerts.find((a) => a.id === 'redflag-steroid-immunocompromised');
+    expect(contra).toBeDefined();
+    expect(contra?.severity).toBe('critical');
+    expect(contra?.message).toContain('바이러스혈증');
+  });
+
+  it('triggers warning alert when steroid is prescribed to diabetic patient', () => {
+    const encounter: Encounter = {
+      ...baseEncounter,
+      history: {
+        ...baseEncounter.history,
+        riskFactors: ['diabetes'],
+      },
+      treatments: [
+        { drugId: 'valacyclovir' },
+        { drugId: 'steroid_prednisolone' },
+      ],
+    };
+    const alerts = evaluateRedFlags(encounter);
+    const diab = alerts.find((a) => a.id === 'warning-steroid-diabetes');
+    expect(diab).toBeDefined();
+    expect(diab?.severity).toBe('warning');
+    expect(diab?.message).toContain('혈당');
   });
 });

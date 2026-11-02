@@ -63,6 +63,8 @@ export const RiskFactorSchema = z.enum([
 
 export const BiologicalSexSchema = z.enum(['M', 'F']);
 
+export const WeightUnitSchema = z.enum(['kg', 'lb']);
+
 export const IvIndicationSchema = z.enum([
   'disseminated_immunocompromised',
   'cns_involvement',
@@ -86,8 +88,18 @@ export const HistorySchema = z.object({
   age: z.number().min(0).max(130).nullable(),
   sex: BiologicalSexSchema.nullable(),
   weightKg: z.number().min(10).max(300).nullable(),
+  weightInputValue: z.number().min(10).max(660).nullable(),
+  weightUnit: WeightUnitSchema,
   serumCreatinine: z.number().min(0.1).max(20).nullable(),
+  serumCreatinineDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid ISO date string (YYYY-MM-DD)')
+    .nullable(),
   egfr: z.number().min(0).max(200).nullable(),
+  egfrDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/, 'Invalid ISO date string (YYYY-MM-DD)')
+    .nullable(),
   crcl: z.number().min(0).max(300).nullable(),
   isCrclManual: z.boolean(),
   newVesiclesEmerging: z.boolean(),

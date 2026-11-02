@@ -188,6 +188,11 @@ export const DermatomeMap: React.FC = () => {
               <span>선택됨 (Selected)</span>
             </div>
           </div>
+
+          {/* Clinical Illustration Credit (CC BY-SA 4.0) */}
+          <div style={{ fontSize: '10px', color: 'var(--text-muted)', marginTop: '6px', textAlign: 'center' }}>
+            Medical Illustration: Goran_tek-en (Wikimedia Commons, CC BY-SA 4.0)
+          </div>
         </div>
 
         {/* Right: Auxiliary Search & Direct Selection Panel with Custom Scroll Slidebar */}

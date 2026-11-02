@@ -22,7 +22,7 @@ describe('TreatmentPanel component', () => {
 
   it('enforces single antiviral selection (radio behavior)', () => {
     render(<TreatmentPanel />);
-    const famvirRadio = screen.getByLabelText(/팜비어 250mg/i);
+    const famvirRadio = screen.getByLabelText(/팜시클로버 250mg|팜비어 250mg/i);
 
     fireEvent.click(famvirRadio);
     expect(
@@ -35,7 +35,7 @@ describe('TreatmentPanel component', () => {
 
   it('shows IV-to-oral step-down button when IV antiviral is selected', () => {
     render(<TreatmentPanel />);
-    const acyclovirIvRadio = screen.getByLabelText(/아시클로버 정맥주사/i);
+    const acyclovirIvRadio = screen.getByLabelText(/아시클로버 주사|아시클로버 정맥주사/i);
 
     fireEvent.click(acyclovirIvRadio);
     expect(screen.getByRole('button', { name: /IV → 경구 전환/i })).toBeInTheDocument();
@@ -61,5 +61,21 @@ describe('TreatmentPanel component', () => {
     expect(
       screen.getByText(/트라마돌 \+ 가바펜티노이드\(프레가발린\/가바펜틴\) FDA 2019 안전성 경고/i)
     ).toBeInTheDocument();
+  });
+
+  it('renders oral glucocorticoid section with clinical indication guide and allows selection', () => {
+    render(<TreatmentPanel />);
+
+    // Glucocorticoid section header and guide must exist
+    expect(screen.getByText(/4\. 전신 스테로이드/i)).toBeInTheDocument();
+    expect(screen.getAllByText(/Ramsay Hunt 증후군/i).length).toBeGreaterThan(0);
+
+    const predCheck = screen.getByLabelText(/프레드니솔론/i);
+    expect(predCheck).toBeInTheDocument();
+
+    fireEvent.click(predCheck);
+    expect(
+      useEncounterStore.getState().treatments.some((t) => t.drugId === 'steroid_prednisolone')
+    ).toBe(true);
   });
 });

@@ -1,8 +1,18 @@
+import { differenceInDays, parseISO } from 'date-fns';
 import type { DrugRegimen, IvIndication } from './types';
 
 export const REGIMEN_METADATA = {
-  reviewedBy: 'Infectious Disease, Clinical Pharmacology & CDS Board',
-  reviewedAt: '2026-10-26',
+  reviewedBy: 'JAE JOON KOH, MD (고재준, 내과 전문의, 지디스내과)',
+  clinicalAdvisor: '김영걸 (피부과 전문의) — 피부 소견(병변 형태·피부분절 분포) 자문',
+  reviewedAt: '2026-11-02',
+  regulatoryPosition:
+    '본 소프트웨어는 미국 21st Century Cures Act § 3060(FDA Non-Device CDS Guidance) 기준을 참고하여 비의료기기 임상결정지원 및 문서작성 보조 도구를 지향하도록 설계되었습니다. 식약처·FDA의 확인을 받은 것은 아닙니다.',
+  editorialIndependence:
+    '본 시스템의 모든 권고 내용, 컷오프 구간, 감량 알고리즘 및 안전성 알림 로직은 고재준(내과 전문의)의 임상적 판단으로 결정되며, 피부 소견 관련 내용은 김영걸(피부과 전문의)의 자문을 받았습니다. 처방 로직은 자문 범위에 포함되지 않습니다. 또한 외부 제약사 및 후원사는 어떠한 권고 내용에도 관여하지 않습니다.',
+  genericPrescribingPolicy:
+    '모든 의약품 권고는 특정 상표명이 아닌 공인 성분명(Generic name) 및 공식 가이드라인 표준을 우선으로 표기합니다.',
+  sponsorshipDisclosure:
+    '현재 본 시스템은 어떠한 상업적 후원도 받지 않고 독립적으로 운영되고 있으며, 향후 학술 지원이 생기면 화면에 스폰서십 내역을 공시합니다.',
   sources: [
     'CDC/ACIP Guidelines for Prevention and Management of Herpes Zoster',
     'IDSA Clinical Practice Guidelines for Management of Herpes Zoster',
@@ -10,10 +20,24 @@ export const REGIMEN_METADATA = {
     'MFDS (식품의약품안전처) 의약품 허가사항: 팜비어정 250mg (famciclovir)',
     'FDA Drug Safety Communication (2019): Gabapentinoids & Opioid Respiratory Depression Warning',
     'Cockcroft-Gault Creatinine Clearance Estimation Standards',
+    'UpToDate: Treatment of herpes zoster - Corticosteroids in acute herpes zoster (Grade 2C)',
+    'NICE CKS: Shingles - Oral Corticosteroids for severe acute pain',
+    'Cochrane Systematic Review (2023): Corticosteroids for preventing postherpetic neuralgia',
   ],
   disclaimer:
-    '본 처방 가이드는 보조 정보 제공을 목적으로 하며, 환자의 신기능(CrCl/eGFR), 체중, 동반 질환 및 약물 상호작용에 따른 최종 처방 및 용량 결정 책임은 처방의에게 있습니다.',
+    '본 시스템은 의사의 독립적인 임상 판단을 보조하는 도구입니다. 최종 처방 및 치료 결정의 책임은 면허를 소지한 처방의에게 있습니다.',
 };
+
+/**
+ * Normalizes weight to kilograms (1 lb = 0.45359237 kg)
+ */
+export function convertWeightToKg(value: number | null, unit: 'kg' | 'lb'): number | null {
+  if (value === null || value <= 0) return null;
+  if (unit === 'lb') {
+    return Math.round(value * 0.45359237 * 10) / 10;
+  }
+  return Math.round(value * 10) / 10;
+}
 
 /**
  * Calculates Creatinine Clearance (CrCl) via Cockcroft-Gault Equation.
@@ -42,17 +66,55 @@ export function calculateCockcroftGault(
   return Math.round(crcl * 10) / 10;
 }
 
+/**
+ * Returns formatted Cockcroft-Gault formula substitution for transparent CDS independent review
+ */
+export function getCockcroftGaultFormulaString(
+  age: number | null,
+  sex: 'M' | 'F' | null,
+  weightKg: number | null,
+  serumCreatinine: number | null
+): string | null {
+  if (!age || !sex || !weightKg || !serumCreatinine || serumCreatinine <= 0) {
+    return null;
+  }
+  const crcl = calculateCockcroftGault(age, sex, weightKg, serumCreatinine);
+  const sexFactor = sex === 'F' ? ' × 0.85 (여성 보정)' : ' × 1.0 (남성)';
+  return `[(140 - ${age}) × ${weightKg}kg] / [72 × ${serumCreatinine}mg/dL]${sexFactor} = ${crcl} mL/min`;
+}
+
+/**
+ * Checks if a lab date is stale (> 30 days) and provides clinical reminder
+ */
+export function getStaleLabWarning(
+  dateString: string | null,
+  referenceDate = new Date()
+): string | null {
+  if (!dateString) return null;
+  try {
+    const labDate = parseISO(dateString);
+    const days = differenceInDays(referenceDate, labDate);
+    if (days > 30) {
+      const months = Math.floor(days / 30);
+      return `검사일: ${dateString} (${days}일 전 - 약 ${months}개월 전 수치, 급성기 신기능 재확인 권장)`;
+    }
+  } catch {
+    // ignore
+  }
+  return null;
+}
+
 export const DRUG_REGIMENS: Record<string, DrugRegimen> = {
   valacyclovir: {
     id: 'valacyclovir',
-    nameKo: '발라시클로버 (Valacyclovir 1g)',
-    nameEn: 'Valacyclovir (Valtrex 1g)',
+    nameKo: '발라시클로버 (Valacyclovir 1000mg)',
+    nameEn: 'Valacyclovir (Valtrex 1000mg)',
     category: 'antiviral_oral',
     standardDose: '1000 mg',
     standardFrequency: 'PO TID (하루 3회)',
     standardDurationDays: 7,
     route: 'PO',
-    notes: '신기능 정상 성인 표준 요법 (1000mg TID × 7일). 발병 72시간 이내 투여 시 최상의 효과.',
+    notes: '표준 1000mg TID × 7일 (발병 72시간 이내 투여 시 최상의 효과). CrCl 50 미만 시 감량.',
   },
   famciclovir: {
     id: 'famciclovir',
@@ -67,8 +129,8 @@ export const DRUG_REGIMENS: Record<string, DrugRegimen> = {
   },
   famvir_kr_250: {
     id: 'famvir_kr_250',
-    nameKo: '팜비어 250mg (Famvir 국내 허가 용량)',
-    nameEn: 'Famvir 250mg (Korean MFDS Approved)',
+    nameKo: '팜시클로버 250mg (Famciclovir 국내 허가 용량)',
+    nameEn: 'Famciclovir 250mg (Korean MFDS Approved)',
     category: 'antiviral_oral',
     standardDose: '250 mg',
     standardFrequency: 'PO TID (하루 3회)',
@@ -78,7 +140,7 @@ export const DRUG_REGIMENS: Record<string, DrugRegimen> = {
   },
   acyclovir_oral: {
     id: 'acyclovir_oral',
-    nameKo: '아시클로버 경구 (Acyclovir Oral 800mg)',
+    nameKo: '아시클로버 800mg 경구 (Acyclovir Oral 800mg)',
     nameEn: 'Acyclovir Oral (Zovirax 800mg)',
     category: 'antiviral_oral',
     standardDose: '800 mg',
@@ -89,7 +151,7 @@ export const DRUG_REGIMENS: Record<string, DrugRegimen> = {
   },
   acyclovir_iv: {
     id: 'acyclovir_iv',
-    nameKo: '아시클로버 정맥주사 (Acyclovir IV 10mg/kg)',
+    nameKo: '아시클로버 주사 10mg/kg (Acyclovir IV 10mg/kg)',
     nameEn: 'Acyclovir IV (Zovirax IV)',
     category: 'antiviral_iv',
     standardDose: '10 mg/kg',
@@ -100,7 +162,7 @@ export const DRUG_REGIMENS: Record<string, DrugRegimen> = {
   },
   foscarnet_iv: {
     id: 'foscarnet_iv',
-    nameKo: '포스카넷 정맥주사 (Foscarnet IV)',
+    nameKo: '포스카넷 주사 (Foscarnet IV)',
     nameEn: 'Foscarnet IV (Foscavir)',
     category: 'antiviral_iv',
     standardDose: '40-60 mg/kg',
@@ -108,6 +170,17 @@ export const DRUG_REGIMENS: Record<string, DrugRegimen> = {
     standardDurationDays: 14,
     route: 'IV',
     notes: '아시클로버 내성/치료 불응 시 2차 치료제. 신기능 감량 필수(mL/min/kg 기준), 전해질(Ca, Mg, K, P) 및 QT 연장 모니터링.',
+  },
+  steroid_prednisolone: {
+    id: 'steroid_prednisolone',
+    nameKo: '프레드니솔론 경구 (Prednisolone 50mg → 감량)',
+    nameEn: 'Prednisolone Oral (Glucocorticoid 50mg/d Tapering)',
+    category: 'steroid',
+    standardDose: '50 mg → 감량',
+    standardFrequency: 'PO QD 아침 식후 (1주차 50mg → 2주차 25mg 후 중단)',
+    standardDurationDays: 14,
+    route: 'PO',
+    notes: '일상적 권장 안 됨. Ramsay Hunt 증후군(안면마비) 또는 면역정상인의 극심한 급성 통증 시 항바이러스제와 병용하여 1~2주 단기 사용. (면역저하자/파종성/단독투여 금기, PHN 예방 효과 없음).',
   },
   pregabalin: {
     id: 'pregabalin',
@@ -185,6 +258,10 @@ export interface AdjustedRegimenResult {
   renalMetricUsed: 'CrCl' | 'eGFR' | 'Standard';
   renalWarning?: string;
   weightAdjustedMg?: number;
+  // Non-device CDS: Transparent Clinical Calculation Basis
+  calculationBasis?: string;
+  appliedTier?: string;
+  guidelineSource?: string;
 }
 
 export interface RenalContext {
@@ -232,6 +309,7 @@ export function calculateAdjustedDose(
 
   // 1. Valacyclovir (Valtrex)
   if (drugId === 'valacyclovir') {
+    const guideline = 'FDA Valtrex Label / CDC / IDSA Guidelines';
     if (primaryRenalValue === null || primaryRenalValue >= 50) {
       const nearThreshold =
         primaryRenalValue !== null &&
@@ -255,6 +333,9 @@ export function calculateAdjustedDose(
         isAdjusted: false,
         renalMetricUsed: metricName,
         renalWarning: warning,
+        calculationBasis: primaryRenalValue ? `${metricName} ${primaryRenalValue} mL/min ≥ 50` : '표준 용량',
+        appliedTier: 'CrCl ≥ 50 mL/min: 표준 1000 mg TID',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 30) {
       return {
@@ -264,6 +345,9 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (30~49): 표준 TID → 감량 1000mg BID 권장.`,
+        calculationBasis: `${metricName} ${primaryRenalValue} mL/min (구간: 30~49)`,
+        appliedTier: 'CrCl 30–49 mL/min: 감량 1000 mg BID',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 10) {
       return {
@@ -273,6 +357,9 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (10~29): 표준 TID → 감량 1000mg QD 권장.`,
+        calculationBasis: `${metricName} ${primaryRenalValue} mL/min (구간: 10~29)`,
+        appliedTier: 'CrCl 10–29 mL/min: 감량 1000 mg QD',
+        guidelineSource: guideline,
       };
     } else {
       return {
@@ -282,12 +369,16 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 500mg QD로 감량 권장 (혈액투석 환자는 투석 후 투여).`,
+        calculationBasis: `${metricName} ${primaryRenalValue} mL/min (구간: <10, ESRD)`,
+        appliedTier: 'CrCl < 10 mL/min: 감량 500 mg QD',
+        guidelineSource: guideline,
       };
     }
   }
 
   // 2. Famciclovir 500mg (FDA Approved)
   if (drugId === 'famciclovir') {
+    const guideline = 'FDA Famvir Label (500mg TID baseline)';
     if (primaryRenalValue === null || primaryRenalValue >= 60) {
       return {
         dose: '500 mg',
@@ -295,6 +386,8 @@ export function calculateAdjustedDose(
         durationDays: 7,
         isAdjusted: false,
         renalMetricUsed: metricName,
+        appliedTier: 'CrCl ≥ 60 mL/min: 표준 500 mg TID',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 40) {
       return {
@@ -304,6 +397,8 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (40~59): 표준 TID → 감량 500mg BID 권장.`,
+        appliedTier: 'CrCl 40–59 mL/min: 감량 500 mg BID',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 20) {
       return {
@@ -313,6 +408,8 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (20~39): 표준 TID → 감량 500mg QD 권장.`,
+        appliedTier: 'CrCl 20–39 mL/min: 감량 500 mg QD',
+        guidelineSource: guideline,
       };
     } else {
       return {
@@ -322,12 +419,15 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (<20): 표준 TID → 감량 250mg QD 권장.`,
+        appliedTier: 'CrCl < 20 mL/min: 감량 250 mg QD',
+        guidelineSource: guideline,
       };
     }
   }
 
   // 3. Famvir 250mg (Korean MFDS Approved)
   if (drugId === 'famvir_kr_250') {
+    const guideline = '식품의약품안전처 팜비어정 250mg 허가사항';
     if (primaryRenalValue === null || primaryRenalValue >= 60) {
       return {
         dose: '250 mg',
@@ -335,6 +435,8 @@ export function calculateAdjustedDose(
         durationDays: 7,
         isAdjusted: false,
         renalMetricUsed: metricName,
+        appliedTier: 'eGFR/CrCl ≥ 60 mL/min: 표준 250 mg TID',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 30) {
       return {
@@ -344,6 +446,8 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (30~59): 표준 TID → 감량 250mg BID 권장.`,
+        appliedTier: 'eGFR/CrCl 30–59 mL/min: 감량 250 mg BID',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 10) {
       return {
@@ -353,21 +457,26 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (10~29): 표준 TID → 감량 250mg QD 권장.`,
+        appliedTier: 'eGFR/CrCl 10–29 mL/min: 감량 250 mg QD',
+        guidelineSource: guideline,
       };
     } else {
       return {
         dose: '250 mg',
-        frequency: 'PO q48h (이틀에 1회) 또는 투석 직후 단회 투여',
+        frequency: 'PO q48h 또는 혈액투석 직후 단회 투여',
         durationDays: 7,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 250mg을 이틀에 1회(q48h) 투여하며, 혈액투석 환자는 투석 직후 단회 투여 권장.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 250mg q48h 또는 투석 직후 단회 투여.`,
+        appliedTier: '말기 신부전/투석: 250 mg q48h 또는 투석 직후 단회 투여',
+        guidelineSource: guideline,
       };
     }
   }
 
   // 4. Acyclovir Oral (Zovirax 800mg)
   if (drugId === 'acyclovir_oral') {
+    const guideline = 'FDA Zovirax Oral Label';
     if (primaryRenalValue === null || primaryRenalValue > 25) {
       return {
         dose: '800 mg',
@@ -375,6 +484,8 @@ export function calculateAdjustedDose(
         durationDays: 7,
         isAdjusted: false,
         renalMetricUsed: metricName,
+        appliedTier: 'CrCl > 25 mL/min: 표준 800 mg 하루 5회',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 10) {
       return {
@@ -384,6 +495,8 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (10~25): 표준 5회 → 감량 800mg q8h(TID) 권장.`,
+        appliedTier: 'CrCl 10–25 mL/min: 감량 800 mg q8h (TID)',
+        guidelineSource: guideline,
       };
     } else {
       return {
@@ -393,110 +506,126 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 표준 5회 → 감량 800mg q12h(BID) 권장.`,
+        appliedTier: 'CrCl < 10 mL/min: 감량 800 mg q12h (BID)',
+        guidelineSource: guideline,
       };
     }
   }
 
   // 5. Acyclovir IV
   if (drugId === 'acyclovir_iv') {
-    const weight = ctx.weightKg;
-    const calculatedMg = typeof weight === 'number' && weight > 0 ? Math.round(weight * 10) : undefined;
-    const doseLabel = calculatedMg !== undefined ? `${calculatedMg} mg (10 mg/kg)` : '10 mg/kg (체중 입력 필요)';
-    const weightWarning = calculatedMg !== undefined ? '' : '⚠️ 체중(kg)을 입력하면 1회 투여량이 mg으로 자동 계산됩니다.';
-
-    // Duration based on indication
+    const guideline = 'CDC / IDSA / UpToDate IV Acyclovir Guidelines';
     let defaultDuration = 7;
     let indicationNote = '';
     if (ctx.ivIndication === 'cns_involvement') {
       defaultDuration = 14;
-      indicationNote = '중추신경계 침범: 10~15 mg/kg × 10~14일.';
+      indicationNote = '중추신경계 침범: 10~15 mg/kg × 10~14일';
     } else if (ctx.ivIndication === 'acute_retinal_necrosis') {
       defaultDuration = 14;
-      indicationNote = '급성망막괴사(ARN): 10~15 mg/kg × 10~14일 후 경구 수주간 유지.';
+      indicationNote = '급성망막괴사(ARN): 10~15 mg/kg × 10~14일 후 경구 수주간 유지';
     } else if (ctx.ivIndication === 'disseminated_immunocompromised') {
       defaultDuration = 7;
-      indicationNote = '면역저하/파종성: 7~10일 투여 후 경구 전환.';
+      indicationNote = '면역저하/파종성: 7~10일 투여 후 경구 전환';
     }
 
-    const combinedNote = [weightWarning, indicationNote].filter(Boolean).join(' ');
+    const hasWeight = ctx.weightKg !== null && ctx.weightKg !== undefined && ctx.weightKg > 0;
+    const calculatedMg = hasWeight ? Math.round(ctx.weightKg! * 10) : undefined;
+    const doseText = hasWeight ? `${calculatedMg} mg (10 mg/kg)` : '10 mg/kg (체중 입력 필요)';
+
+    let warningPrefix = '';
+    if (!hasWeight) {
+      warningPrefix = '환자 체중(kg)을 입력하면 1회 투여량(mg)이 자동 계산됩니다. ';
+    }
 
     if (primaryRenalValue === null || primaryRenalValue > 50) {
       return {
-        dose: doseLabel,
+        dose: doseText,
         frequency: 'IV q8h (1시간 이상 점적)',
         durationDays: defaultDuration,
         isAdjusted: false,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: combinedNote || undefined,
+        renalWarning: (warningPrefix + indicationNote).trim() || undefined,
+        appliedTier: 'CrCl > 50 mL/min: 10 mg/kg IV q8h',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 25) {
       return {
-        dose: doseLabel,
+        dose: doseText,
         frequency: 'IV q12h (12시간마다 점적)',
         durationDays: defaultDuration,
         isAdjusted: true,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (25~50): 아시클로버 IV 간격을 q12h로 연장 권장. ${combinedNote}`.trim(),
+        renalWarning: `${warningPrefix}${metricName} ${primaryRenalValue} mL/min (25~50): 아시클로버 IV 간격을 q12h로 연장 권장. ${indicationNote}`.trim(),
+        appliedTier: 'CrCl 25–50 mL/min: 간격 연장 q12h',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 10) {
       return {
-        dose: doseLabel,
+        dose: doseText,
         frequency: 'IV q24h (24시간마다 점적)',
         durationDays: defaultDuration,
         isAdjusted: true,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (10~24): 아시클로버 IV 간격을 q24h로 연장 권장. ${combinedNote}`.trim(),
+        renalWarning: `${warningPrefix}${metricName} ${primaryRenalValue} mL/min (10~24): 아시클로버 IV 간격을 q24h로 연장 권장. ${indicationNote}`.trim(),
+        appliedTier: 'CrCl 10–24 mL/min: 간격 연장 q24h',
+        guidelineSource: guideline,
       };
     } else {
-      const halvedMg = typeof weight === 'number' && weight > 0 ? Math.round(weight * 5) : undefined;
-      const halvedLabel = halvedMg !== undefined ? `${halvedMg} mg (5 mg/kg)` : '5 mg/kg (체중 입력 필요)';
+      const halvedMg = hasWeight ? Math.round(ctx.weightKg! * 5) : undefined;
+      const halvedDoseText = hasWeight ? `${halvedMg} mg (5 mg/kg)` : '5 mg/kg (체중 입력 필요)';
       return {
-        dose: halvedLabel,
+        dose: halvedDoseText,
         frequency: 'IV q24h (24시간마다 점적)',
         durationDays: defaultDuration,
         isAdjusted: true,
         renalMetricUsed: metricName,
         weightAdjustedMg: halvedMg,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<10): 용량 5mg/kg q24h로 감량 권장. ${combinedNote}`.trim(),
+        renalWarning: `${warningPrefix}${metricName} ${primaryRenalValue} mL/min (<10): 용량 5mg/kg q24h로 감량 권장. ${indicationNote}`.trim(),
+        appliedTier: 'CrCl < 10 mL/min: 감량 5 mg/kg q24h',
+        guidelineSource: guideline,
       };
     }
   }
 
   // 6. Foscarnet IV
   if (drugId === 'foscarnet_iv') {
-    const weight = ctx.weightKg;
-    const calculatedMg = typeof weight === 'number' && weight > 0 ? Math.round(weight * 40) : undefined;
-    const doseLabel = calculatedMg !== undefined ? `${calculatedMg} mg (40 mg/kg)` : '40-60 mg/kg (체중 입력 필요)';
-    const weightWarning = calculatedMg !== undefined ? '' : '⚠️ 체중(kg)이 입력되지 않았습니다.';
+    const guideline = 'IDSA / FDA Foscavir Label';
+    const hasWeight = ctx.weightKg !== null && ctx.weightKg !== undefined && ctx.weightKg > 0;
+    const calculatedMg = hasWeight ? Math.round(ctx.weightKg! * 40) : undefined;
+    const doseText = hasWeight ? `${calculatedMg} mg (40 mg/kg)` : '40-60 mg/kg (체중 입력 필요)';
 
     if (primaryRenalValue === null || primaryRenalValue >= 60) {
       return {
-        dose: doseLabel,
+        dose: doseText,
         frequency: 'IV q8h (1-2시간 점적)',
         durationDays: 14,
         isAdjusted: false,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: weightWarning || undefined,
+        appliedTier: 'CrCl ≥ 60 mL/min: 40 mg/kg IV q8h',
+        guidelineSource: guideline,
       };
     } else {
       return {
-        dose: doseLabel,
+        dose: doseText,
         frequency: '원내 약제부 신기능 환산 협진 필수',
         durationDays: 14,
         isAdjusted: true,
         renalMetricUsed: metricName,
         weightAdjustedMg: calculatedMg,
-        renalWarning: `${weightWarning ? weightWarning + ' ' : ''}${metricName} ${primaryRenalValue} mL/min: 포스카넷은 mL/min/kg 단위의 복잡한 감량표가 적용되므로 약제부 임상 협진을 의뢰하십시오. 전해질(칼슘, 마그네슘, 칼륨, 인) 및 QT 연장 모니터링 필수.`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min: 포스카넷은 mL/min/kg 단위의 복잡한 감량표가 적용되므로 약제부 임상 협진을 의뢰하십시오. 전해질(칼슘, 마그네슘, 칼륨, 인) 및 QT 연장 모니터링 필수.`,
+        appliedTier: 'CrCl < 60 mL/min: 약제부 환산 협진 필수',
+        guidelineSource: guideline,
       };
     }
   }
 
   // 7. Pregabalin (Lyrica)
   if (drugId === 'pregabalin') {
+    const guideline = 'FDA Lyrica Label (Neuropathic Pain)';
     if (primaryRenalValue === null || primaryRenalValue >= 60) {
       return {
         dose: '75 mg/day',
@@ -504,6 +633,8 @@ export function calculateAdjustedDose(
         durationDays: 14,
         isAdjusted: false,
         renalMetricUsed: metricName,
+        appliedTier: 'CrCl ≥ 60 mL/min: 75 mg/day 분할 투여',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 30) {
       return {
@@ -513,6 +644,8 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (30~59): 프레가발린 초기 75mg QD(취침 전) 또는 37.5mg BID 분할 권장. (최대 300mg/day)`,
+        appliedTier: 'CrCl 30–59 mL/min: 75 mg/day (최대 300mg/d)',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 15) {
       return {
@@ -522,21 +655,26 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (15~29): 프레가발린 25~50mg QD 감량 권장.`,
+        appliedTier: 'CrCl 15–29 mL/min: 감량 25~50 mg/day QD',
+        guidelineSource: guideline,
       };
     } else {
       return {
         dose: '25 mg',
-        frequency: 'PO QD (투석 환자는 투석 후 보충)',
+        frequency: 'PO QD (하루 1회; 혈액투석 환자는 투석 후 보충)',
         durationDays: 14,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<15): 프레가발린 25mg QD 감량 권장 (혈액투석 환자는 투석 직후 보충 투여).`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (<15): 프레가발린 25mg QD 감량 권장.`,
+        appliedTier: 'CrCl < 15 mL/min: 감량 25 mg QD',
+        guidelineSource: guideline,
       };
     }
   }
 
   // 8. Gabapentin (Neurontin)
   if (drugId === 'gabapentin') {
+    const guideline = 'FDA Neurontin Label / Clinical Pharmacology';
     if (primaryRenalValue === null || primaryRenalValue >= 60) {
       return {
         dose: '300 mg',
@@ -544,15 +682,19 @@ export function calculateAdjustedDose(
         durationDays: 14,
         isAdjusted: false,
         renalMetricUsed: metricName,
+        appliedTier: 'CrCl ≥ 60 mL/min: 300 mg QHS 시작 (최대 1800mg/d)',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 30) {
       return {
         dose: '300 mg',
-        frequency: 'PO QHS (취침 전 시작, 필요시 최대 1400mg/day까지 BID 분할 증량)',
+        frequency: 'PO QHS (취침 전 1회 시작, 점진적 증량)',
         durationDays: 14,
         isAdjusted: true,
         renalMetricUsed: metricName,
-        renalWarning: `${metricName} ${primaryRenalValue} mL/min (30~59): 가바펜틴 초기 300mg QHS로 시작, 증량 시 최대 1400mg/day(BID 분할) 상한 준수 (정상인 기준인 3600mg까지 무리하게 올리지 않음).`,
+        renalWarning: `${metricName} ${primaryRenalValue} mL/min (30~59): 가바펜틴 초기 300mg QHS로 시작하며, 신기능 저하 시 증량 상한은 최대 1400mg/day(BID 분할)입니다.`,
+        appliedTier: 'CrCl 30–59 mL/min: 300 mg QHS 시작, 최대 1400 mg/d',
+        guidelineSource: guideline,
       };
     } else if (primaryRenalValue >= 15) {
       return {
@@ -562,6 +704,8 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (15~29): 가바펜틴 200~700mg/day QD 범위, 하루 최대 700mg 상한 준수.`,
+        appliedTier: 'CrCl 15–29 mL/min: 200~300 mg QD 시작, 최대 700 mg/d',
+        guidelineSource: guideline,
       };
     } else {
       return {
@@ -571,12 +715,15 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (<15): 가바펜틴 100~300mg/day QD 투여하며, 혈액투석 환자는 투석 직후 보충 투여(125~350mg).`,
+        appliedTier: 'CrCl < 15 mL/min: 100~300 mg QD',
+        guidelineSource: guideline,
       };
     }
   }
 
   // 9. Tramadol / APAP
   if (drugId === 'tramadol_apap') {
+    const guideline = 'FDA Ultracet Label';
     if (primaryRenalValue !== null && primaryRenalValue < 30) {
       return {
         dose: '1 tab',
@@ -585,6 +732,8 @@ export function calculateAdjustedDose(
         isAdjusted: true,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min (<30): 트라마돌/APAP 투여 간격 12시간으로 연장 및 하루 최대 4정 제한.`,
+        appliedTier: 'CrCl < 30 mL/min: 투여 간격 q12h, 최대 4정/일',
+        guidelineSource: guideline,
       };
     }
     return {
@@ -593,21 +742,42 @@ export function calculateAdjustedDose(
       durationDays: 7,
       isAdjusted: false,
       renalMetricUsed: metricName,
+      appliedTier: 'CrCl ≥ 30 mL/min: 1정 TID (최대 8정/일)',
+      guidelineSource: guideline,
     };
   }
 
   // 10. NSAID (Ibuprofen)
   if (drugId === 'nsaid_ibuprofen') {
+    const guideline = 'KDIGO AKI / NSAID Clinical Guidelines';
     if (primaryRenalValue !== null && primaryRenalValue < 60) {
       return {
         dose: '400 mg',
         frequency: 'PO TID pc',
         durationDays: 7,
-        isAdjusted: false, // NSAIDs are not dose-reduced; cautioned or replaced
+        isAdjusted: false,
         renalMetricUsed: metricName,
         renalWarning: `${metricName} ${primaryRenalValue} mL/min: 신기능 저하 환자에서 NSAID 사용은 신독성 및 급성 신손상(AKI) 위험이 높으므로 아세트아미노펜 단독 제제 대체 권고.`,
+        appliedTier: 'CrCl < 60 mL/min: 신독성 주의 / 피처방 권고',
+        guidelineSource: guideline,
       };
     }
+  }
+
+  // 11. Oral Glucocorticoid (Prednisolone)
+  if (drugId === 'steroid_prednisolone') {
+    const guideline = 'UpToDate (Grade 2C) / NICE CKS / Cochrane 2023';
+    return {
+      dose: '50 mg → 25 mg',
+      frequency: 'PO QD 아침 식후 (1주차 50mg/d → 2주차 25mg/d 점진적 감량 후 중단)',
+      durationDays: 14,
+      isAdjusted: false,
+      renalMetricUsed: 'Standard',
+      renalWarning:
+        '반드시 항바이러스제와 병용하십시오. 면역저하자·파종성 환자 금기. 당뇨 환자 혈당 급상승 주의 및 위장관 보호제(PPI) 병용 검토.',
+      appliedTier: '면역정상 심한 급성통증 또는 Ramsay Hunt 한정: 1~2주 단기 테이퍼링',
+      guidelineSource: guideline,
+    };
   }
 
   return {
